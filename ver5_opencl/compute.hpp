@@ -49,7 +49,7 @@ void GSimulation :: update_accel()
 }
 
 const char *getErrorString(cl_int error);
-void GSimulation :: update_accel_cl()
+void GSimulation :: update_accel_cl(struct ParticleSoA* particles)
 {
 
     std::vector<cl::Platform> platforms;
@@ -88,7 +88,7 @@ void GSimulation :: update_accel_cl()
     std::string src_str = R"CLC(
    #include <Constants.hpp>
    #include <Particle.hpp>
-   __kernel void comp(__global const struct ParticleSoA* particles) {
+   __kernel void comp(__global struct ParticleSoA* particles) {
    int i = get_global_id(0);
 /*#ifdef ASALIGN
      __assume_aligned(particles->pos_x, ALIGNMENT);
@@ -125,13 +125,24 @@ void GSimulation :: update_accel_cl()
    }
     )CLC";
 
-    cl::Program program(src_str);
-
+    cl::Program program(context, src_str);
+    cl:: Kernel kernel;
     try {
         program.build("-cl-std=CL2.0");
         auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>();
         for (auto &pair : buildInfo)
             std::cerr << pair.second << std::endl << std::endl;
+        kernel = cl::Kernel(program, "comp"); 
+        
+        // Make buffer
+        cl::Buffer particles_d = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(ParticleSoA), particles);
+        kernel.setArg(0, particles);
+        q.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
+        q.enqueueReadBuffer(particles_d, CL_TRUE, 0, sizeof(particles), particles);
+        q.finish();
+
+
+
     } catch (cl::Error &e) {
         // Print build info for all devices
         cl_int buildErr;
@@ -139,13 +150,10 @@ void GSimulation :: update_accel_cl()
         for (auto &pair : buildInfo) {
             std::cerr << pair.second << std::endl << std::endl;
         }
+        std::cout << getErrorString(e.err()) << std::endl;
         return;
     }
 
-//    cl::Kernel kernel;
-//    try {
-//        kernel = Cl:Kernel(program, "comp
-//    }
 
 
 

@@ -35,7 +35,7 @@ public:
   void set_number_of_steps(int N);
   void start();
   void update_accel();
-  void update_accel_cl(); 
+  void update_accel_cl(struct ParticleSoA*); 
   
 private:
   ParticleSoA *particles;

@@ -106,7 +106,6 @@ void GSimulation :: init_mass()
 
 void GSimulation :: start() 
 {
-  update_accel_cl();
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
@@ -125,6 +124,8 @@ void GSimulation :: start()
   particles->acc_z = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
   particles->mass  = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
  
+
+
   init_pos();	
   init_vel();
   init_acc();
@@ -147,7 +148,8 @@ void GSimulation :: start()
   for (int s=1; s<=get_nsteps(); ++s)
   {   
    ts0 += time.start(); 
-   update_accel(); 
+   update_accel_cl(particles);
+  // update_accel(); 
    energy = 0;
 
    for (i = 0; i < n; ++i)// update position
