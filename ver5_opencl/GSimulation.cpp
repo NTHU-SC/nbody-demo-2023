@@ -197,9 +197,12 @@ void GSimulation :: start()
             std::cerr << pair.second << std::endl << std::endl;
         kernel = cl::Kernel(program, "comp"); 
         
-        // Make buffer
-        cl::Buffer particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(ParticleSoA), particles);
-        kernel.setArg(0, particles);
+//        // Make buffer
+//        cl::Buffer particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(particles), particles);
+//        kernel.setArg(0, particles);
+//   OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
+//   OpenCL.queue.enqueueReadBuffer(particles_d, CL_TRUE, 0, sizeof(particles), particles);
+//   OpenCL.queue.finish();
 
 
 
@@ -221,11 +224,18 @@ void GSimulation :: start()
   {   
    ts0 += time.start(); 
 
-   OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
+    cl::Buffer particles_d;
+    try {
+        // Make buffer
+        cl::Buffer particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(particles), particles);
+        kernel.setArg(0, particles);
+       OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
    OpenCL.queue.enqueueReadBuffer(particles_d, CL_TRUE, 0, sizeof(particles), particles);
    OpenCL.queue.finish();
 
-  // update_accel(); 
+    } catch (cl::Error &e) {
+        std::cout << OCL::getErrorString(e.err()) << std::endl;
+    }
    energy = 0;
 
    for (i = 0; i < n; ++i)// update position
