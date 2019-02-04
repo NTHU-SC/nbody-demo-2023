@@ -104,6 +104,7 @@ void GSimulation :: init_mass()
   }
 }
 
+
 void GSimulation :: start() 
 {
   real_type energy;
@@ -143,12 +144,87 @@ void GSimulation :: start()
   double gflops = 1e-9 * ( (11. + 18. ) * nd*nd  +  nd * 19. );
   double av=0.0, dev=0.0;
   int nf = 0;
+
+  OCL::OCL OpenCL = OCL::OCL();  // initialize OpenCL environment w/default settings
+
+  std::string src_str = R"CLC(
+   #include <Constants.hpp>
+   #include <Particle.hpp>
+   __kernel void comp(__global struct ParticleSoA* particles) {
+   int i = get_global_id(0);
+/*#ifdef ASALIGN
+     __assume_aligned(particles->pos_x, ALIGNMENT);
+     __assume_aligned(particles->pos_y, ALIGNMENT);
+     __assume_aligned(particles->pos_z, ALIGNMENT);
+     __assume_aligned(particles->acc_x, ALIGNMENT);
+     __assume_aligned(particles->acc_y, ALIGNMENT);
+     __assume_aligned(particles->acc_z, ALIGNMENT);
+     __assume_aligned(particles->mass, ALIGNMENT);
+#endif
+*/
+     real_type ax_i = particles->acc_x[i];
+     real_type ay_i = particles->acc_y[i];
+     real_type az_i = particles->acc_z[i];
+   int j = get_global_id(1);
+     real_type dx, dy, dz;
+	 real_type distanceSqr = 0.0f;
+	 real_type distanceInv = 0.0f;
+		  
+	 dx = particles->pos_x[j] - particles->pos_x[i];	//1flop
+	 dy = particles->pos_y[j] - particles->pos_y[i];	//1flop	
+	 dz = particles->pos_z[j] - particles->pos_z[i];	//1flop
+	
+ 	 distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+ 	 distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+
+	 ax_i+= dx * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	 ay_i += dy * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	 az_i += dz * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+
+     particles->acc_x[i] = ax_i;
+     particles->acc_y[i] = ay_i;
+     particles->acc_z[i] = az_i;
+   }
+    )CLC";
+
+    cl::Program program(OpenCL.context, src_str);
+    cl::Kernel kernel;
+    cl::Buffer particles_d;
+    try {
+        program.build("-cl-std=CL2.0");
+        auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>();
+        for (auto &pair : buildInfo)
+            std::cerr << pair.second << std::endl << std::endl;
+        kernel = cl::Kernel(program, "comp"); 
+        
+        // Make buffer
+        cl::Buffer particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(ParticleSoA), particles);
+        kernel.setArg(0, particles);
+
+
+
+    } catch (cl::Error &e) {
+        // Print build info for all devices
+        cl_int buildErr;
+        auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(&buildErr);
+        for (auto &pair : buildInfo) {
+            std::cerr << pair.second << std::endl << std::endl;
+        }
+        std::cout << OCL::getErrorString(e.err()) << std::endl;
+        return;
+    }
+
+
   
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   {   
    ts0 += time.start(); 
-   update_accel_cl(particles);
+
+   OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
+   OpenCL.queue.enqueueReadBuffer(particles_d, CL_TRUE, 0, sizeof(particles), particles);
+   OpenCL.queue.finish();
+
   // update_accel(); 
    energy = 0;
 
