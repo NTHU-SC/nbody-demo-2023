@@ -197,12 +197,9 @@ void GSimulation :: start()
             std::cerr << pair.second << std::endl << std::endl;
         kernel = cl::Kernel(program, "comp"); 
         
-//        // Make buffer
-//        cl::Buffer particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(particles), particles);
-//        kernel.setArg(0, particles);
-//   OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
-//   OpenCL.queue.enqueueReadBuffer(particles_d, CL_TRUE, 0, sizeof(particles), particles);
-//   OpenCL.queue.finish();
+        // Make buffer
+        particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(particles), particles);
+        kernel.setArg(0, particles);
 
 
 
@@ -224,18 +221,18 @@ void GSimulation :: start()
   {   
    ts0 += time.start(); 
 
-    cl::Buffer particles_d;
     try {
-        // Make buffer
-        cl::Buffer particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(particles), particles);
-        kernel.setArg(0, particles);
-       OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
+   OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
    OpenCL.queue.enqueueReadBuffer(particles_d, CL_TRUE, 0, sizeof(particles), particles);
    OpenCL.queue.finish();
-
     } catch (cl::Error &e) {
+        // Print build info for all devices
+
+        std::cout << "Failed to launch kernel" << std::endl;
         std::cout << OCL::getErrorString(e.err()) << std::endl;
+        return;
     }
+  // update_accel(); 
    energy = 0;
 
    for (i = 0; i < n; ++i)// update position
