@@ -149,47 +149,97 @@ void GSimulation :: start()
 
   std::string src_str = R"CLC(
    #include <Constants.hpp>
-   #include <Particle.hpp>
-   __kernel void comp(__global struct ParticleSoA* particles) {
+   #include <types.hpp>
+   //#include <Particle.hpp>
+   __kernel void comp(
+       __global real_type* particles_pos_x, 
+       __global real_type* particles_pos_y, 
+       __global real_type* particles_pos_z, 
+
+       __global real_type* particles_vel_x, 
+       __global real_type* particles_vel_y, 
+       __global real_type* particles_vel_z, 
+
+       __global real_type* particles_acc_x, 
+       __global real_type* particles_acc_y, 
+       __global real_type* particles_acc_z, 
+
+       __global real_type* particles_mass, 
+
+       real_type dt
+       ) 
+   {
    int i = get_global_id(0);
+   int n = get_global_size(0);
 /*#ifdef ASALIGN
-     __assume_aligned(particles->pos_x, ALIGNMENT);
-     __assume_aligned(particles->pos_y, ALIGNMENT);
-     __assume_aligned(particles->pos_z, ALIGNMENT);
-     __assume_aligned(particles->acc_x, ALIGNMENT);
-     __assume_aligned(particles->acc_y, ALIGNMENT);
-     __assume_aligned(particles->acc_z, ALIGNMENT);
-     __assume_aligned(particles->mass, ALIGNMENT);
+   __assume_aligned(particles->pos_x, ALIGNMENT);
+   __assume_aligned(particles_pos_y, ALIGNMENT);
+   __assume_aligned(particles_pos_z, ALIGNMENT);
+   __assume_aligned(particles_acc_x, ALIGNMENT);
+   __assume_aligned(particles_acc_y, ALIGNMENT);
+   __assume_aligned(particles_acc_z, ALIGNMENT);
+   __assume_aligned(particles_mass, ALIGNMENT);
 #endif
 */
-     real_type ax_i = particles->acc_x[i];
-     real_type ay_i = particles->acc_y[i];
-     real_type az_i = particles->acc_z[i];
-   int j = get_global_id(1);
-     real_type dx, dy, dz;
+   real_type ax_i = particles_acc_x[i];
+   real_type ay_i = particles_acc_y[i];
+   real_type az_i = particles_acc_z[i];
+   real_type dx, dy, dz;
 	 real_type distanceSqr = 0.0f;
 	 real_type distanceInv = 0.0f;
 		  
-	 dx = particles->pos_x[j] - particles->pos_x[i];	//1flop
-	 dy = particles->pos_y[j] - particles->pos_y[i];	//1flop	
-	 dz = particles->pos_z[j] - particles->pos_z[i];	//1flop
+	 for (int j = 0; j < n; j++)
+   {
+	   dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
+	   dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
+	   dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
 	
- 	 distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	 distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+ 	   distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+ 	   distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
-	 ax_i+= dx * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	 ay_i += dy * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	 az_i += dz * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	   ax_i+= dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	   ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	   az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+   }
 
-     particles->acc_x[i] = ax_i;
-     particles->acc_y[i] = ay_i;
-     particles->acc_z[i] = az_i;
+   particles_acc_x[i] = ax_i;
+   particles_acc_y[i] = ay_i;
+   particles_acc_z[i] = az_i;
+
+
+   barrier(CLK_GLOBAL_MEM_FENCE);
+   particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
+   particles_vel_y[i] += particles_acc_y[i] * dt; //2flops
+   particles_vel_z[i] += particles_acc_z[i] * dt; //2flops
+  
+   particles_pos_x[i] += particles_vel_x[i] * dt; //2flops
+   particles_pos_y[i] += particles_vel_y[i] * dt; //2flops
+   particles_pos_z[i] += particles_vel_z[i] * dt; //2flops
+
+   particles_acc_x[i] = 0.;
+   particles_acc_y[i] = 0.;
+   particles_acc_z[i] = 0.;
+ 
+  
+
    }
     )CLC";
 
     cl::Program program(OpenCL.context, src_str);
     cl::Kernel kernel;
-    cl::Buffer particles_d;
+    cl::Buffer particles_pos_x_d;
+    cl::Buffer particles_pos_y_d;
+    cl::Buffer particles_pos_z_d;
+                                
+    cl::Buffer particles_vel_x_d;
+    cl::Buffer particles_vel_y_d;
+    cl::Buffer particles_vel_z_d;
+                                
+    cl::Buffer particles_acc_x_d;
+    cl::Buffer particles_acc_y_d;
+    cl::Buffer particles_acc_z_d;
+                                
+    cl::Buffer particles_mass_d ;
     try {
         program.build("-cl-std=CL2.0");
         auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>();
@@ -198,12 +248,40 @@ void GSimulation :: start()
         kernel = cl::Kernel(program, "comp"); 
         
         // Make buffer
-        particles_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(particles), particles);
-        kernel.setArg(0, particles);
+        particles_pos_x_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_x);
+        particles_pos_y_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_y);
+        particles_pos_z_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_z);
 
+        particles_vel_x_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_x);
+        particles_vel_y_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_y);
+        particles_vel_z_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_z);
+
+        particles_acc_x_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_x);
+        particles_acc_y_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_y);
+        particles_acc_z_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_z);
+
+        particles_mass_d = cl::Buffer(OpenCL.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->mass);
+
+
+        kernel.setArg(0, particles_pos_x_d);
+        kernel.setArg(1, particles_pos_y_d);
+        kernel.setArg(2, particles_pos_z_d);
+
+        kernel.setArg(3, particles_vel_x_d);
+        kernel.setArg(4, particles_vel_y_d);
+        kernel.setArg(5, particles_vel_z_d);
+
+        kernel.setArg(6, particles_acc_x_d);
+        kernel.setArg(7, particles_acc_y_d);
+        kernel.setArg(8, particles_acc_z_d);
+
+        kernel.setArg(9, particles_mass_d);
+
+        kernel.setArg(10, dt);
 
 
     } catch (cl::Error &e) {
+        printf("failed to setup the ocl kernel\n");
         // Print build info for all devices
         cl_int buildErr;
         auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(&buildErr);
@@ -220,11 +298,49 @@ void GSimulation :: start()
   for (int s=1; s<=get_nsteps(); ++s)
   {   
    ts0 += time.start(); 
+   energy = 0;
 
+#if 1
     try {
-   OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart, _npart), cl::NullRange);
-   OpenCL.queue.enqueueReadBuffer(particles_d, CL_TRUE, 0, sizeof(particles), particles);
+   OpenCL.queue.enqueueWriteBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
+   OpenCL.queue.enqueueWriteBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
+   OpenCL.queue.enqueueWriteBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
+
+   OpenCL.queue.enqueueWriteBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
+   OpenCL.queue.enqueueWriteBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
+   OpenCL.queue.enqueueWriteBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
+
+   OpenCL.queue.enqueueWriteBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
+   OpenCL.queue.enqueueWriteBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
+   OpenCL.queue.enqueueWriteBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
+
+   OpenCL.queue.enqueueWriteBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+
+   //compute
+   OpenCL.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart), cl::NullRange);
+
+   //read back
+   OpenCL.queue.enqueueReadBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
+   OpenCL.queue.enqueueReadBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
+   OpenCL.queue.enqueueReadBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
+
+   OpenCL.queue.enqueueReadBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
+   OpenCL.queue.enqueueReadBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
+   OpenCL.queue.enqueueReadBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
+
+   OpenCL.queue.enqueueReadBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
+   OpenCL.queue.enqueueReadBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
+   OpenCL.queue.enqueueReadBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
+
+   OpenCL.queue.enqueueReadBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+
    OpenCL.queue.finish();
+
+   energy += particles->mass[i] * (
+       particles->vel_x[i]*particles->vel_x[i] + 
+             particles->vel_y[i]*particles->vel_y[i] +
+             particles->vel_z[i]*particles->vel_z[i]); //7flops
+
     } catch (cl::Error &e) {
         // Print build info for all devices
 
@@ -232,31 +348,10 @@ void GSimulation :: start()
         std::cout << OCL::getErrorString(e.err()) << std::endl;
         return;
     }
-  // update_accel(); 
-   energy = 0;
+#else
+   update(dt); 
+#endif 
 
-   for (i = 0; i < n; ++i)// update position
-   {
-     particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
-     particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
-     particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
-	  
-     particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
-     particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
-     particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
-
-     particles->acc_x[i] = 0.;
-     particles->acc_y[i] = 0.;
-     particles->acc_z[i] = 0.;
-	
-     energy += particles->mass[i] * (
-	       particles->vel_x[i]*particles->vel_x[i] + 
-               particles->vel_y[i]*particles->vel_y[i] +
-               particles->vel_z[i]*particles->vel_z[i]); //7flops
-   }
-  
-    _kenergy = 0.5 * energy; 
-    
     ts1 += time.stop();
     if(!(s%get_sfreq()) ) 
     {

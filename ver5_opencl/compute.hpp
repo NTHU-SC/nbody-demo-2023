@@ -10,19 +10,19 @@
 #include "OCL.hpp"
 
 
-void GSimulation :: update_accel()
+void GSimulation :: update(real_type dt)
 {
    for (int i = 0; i < _npart; i++)// update acceleration
    {
-#ifdef ASALIGN
-     __assume_aligned(particles->pos_x, ALIGNMENT);
-     __assume_aligned(particles->pos_y, ALIGNMENT);
-     __assume_aligned(particles->pos_z, ALIGNMENT);
-     __assume_aligned(particles->acc_x, ALIGNMENT);
-     __assume_aligned(particles->acc_y, ALIGNMENT);
-     __assume_aligned(particles->acc_z, ALIGNMENT);
-     __assume_aligned(particles->mass, ALIGNMENT);
-#endif
+//#ifdef ASALIGN
+//     __assume_aligned(particles->pos_x, ALIGNMENT);
+//     __assume_aligned(particles->pos_y, ALIGNMENT);
+//     __assume_aligned(particles->pos_z, ALIGNMENT);
+//     __assume_aligned(particles->acc_x, ALIGNMENT);
+//     __assume_aligned(particles->acc_y, ALIGNMENT);
+//     __assume_aligned(particles->acc_z, ALIGNMENT);
+//     __assume_aligned(particles->mass, ALIGNMENT);
+//#endif
      real_type ax_i = particles->acc_x[i];
      real_type ay_i = particles->acc_y[i];
      real_type az_i = particles->acc_z[i];
@@ -48,6 +48,31 @@ void GSimulation :: update_accel()
      particles->acc_y[i] = ay_i;
      particles->acc_z[i] = az_i;
    }
+
+   real_type energy = 0;
+
+   for (int i = 0; i < _npart; ++i)// update position
+   {
+     particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
+     particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
+     particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
+	  
+     particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
+     particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
+     particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
+
+     particles->acc_x[i] = 0.;
+     particles->acc_y[i] = 0.;
+     particles->acc_z[i] = 0.;
+	
+     energy += particles->mass[i] * (
+	       particles->vel_x[i]*particles->vel_x[i] + 
+               particles->vel_y[i]*particles->vel_y[i] +
+               particles->vel_z[i]*particles->vel_z[i]); //7flops
+   }
+  
+    _kenergy = 0.5 * energy; 
+
 
 }
 

@@ -34,7 +34,7 @@ public:
   void set_number_of_particles(int N);
   void set_number_of_steps(int N);
   void start();
-  void update_accel();
+  void update(real_type dt);
   
 private:
   ParticleSoA *particles;
