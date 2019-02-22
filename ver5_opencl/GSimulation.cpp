@@ -303,40 +303,47 @@ void GSimulation :: start()
    energy = 0;
 
 #if 1
-    try {
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
+   try {
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
 
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
 
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
 
-   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+     OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
 
-   //compute
-   OpenCL.compute_units[0].queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart), cl::NullRange);
+     //compute
+     OpenCL.compute_units[0].queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart), cl::NullRange);
 
-   //read back
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
+     //read back
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
 
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
 
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
 
-   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+     OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
 
-   OpenCL.compute_units[0].queue.finish();
+     OpenCL.compute_units[0].queue.finish();
+   } catch (cl::Error &e) {
+       // Print build info for all devices
+
+       std::cout << "Failed to launch kernel" << std::endl;
+       std::cout << OCL::getErrorString(e.err()) << std::endl;
+       return;
+   }
 
    energy = 0;
    for (int i = 0; i < _npart; ++i)// update position
@@ -363,13 +370,6 @@ void GSimulation :: start()
 
 
 
-    } catch (cl::Error &e) {
-        // Print build info for all devices
-
-        std::cout << "Failed to launch kernel" << std::endl;
-        std::cout << OCL::getErrorString(e.err()) << std::endl;
-        return;
-    }
 #else
    update(dt); 
 #endif 
