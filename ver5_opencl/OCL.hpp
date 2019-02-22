@@ -6,40 +6,60 @@ class OCL
         ~OCL() {};
 
 //    private:
-         cl::Platform platform;
-         cl::Device device;
-         cl::Context context;
-         cl::CommandQueue queue;
+         std::vector<cl::Platform> platforms;
+         std::vector<cl::Device> devices;
+         std::vector<cl::Context> contexts;
+         std::vector<cl::CommandQueue> queues;
 
 
     public:
          OCL() {
-            std::vector<cl::Platform> platforms;
-            cl::Platform::get(&platforms);
-            printf("\nFound %d platforms:\n", platforms.size());
-            for (auto &plat : platforms) // printout available platforms
-                std::cout << plat.getInfo<CL_PLATFORM_NAME>() << std::endl;
+            std::vector<cl::Platform> plats;
+            cl::Platform::get(&plats);
+            printf("\nFound %d platforms:\n", plats.size());
+            for (auto &plat : plats)  {// printout available platforms
+                std::cout << "Enable " << plat.getInfo<CL_PLATFORM_NAME>() << "? (yes/no)" << std::endl;
+                std::string ans;
+                std::cin >> ans;
+                if (ans == std::string("yes"))  {
+                  auto pos = platforms.end();
+                  platforms.insert(pos, plat);
+                }
+            }
 
             if (platforms.size() == 0) {
-                std::cout << "no OpenCL platforms found!!!" << std::endl << std::endl;
-                return;
+                std::cout << "no OpenCL platforms found/selected!!!" << std::endl << std::endl;
+                return; 
             }
-            platform = platforms[0]; // pick the first one available
-            std::vector<cl::Device> devices;
-            platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
-            printf("\nFound %d devices:\n", devices.size());
-            for (auto &dev : devices) 
-                std::cout << dev.getInfo<CL_DEVICE_NAME>() << std::endl << std::endl;
+
+            for (auto &platform : platforms)  {// printout available platforms
+              std::vector<cl::Device> devs;
+              platform.getDevices(CL_DEVICE_TYPE_ALL, &devs);
+              printf("\nFound %d devices:\n", devs.size());
+              for (auto &dev : devs)  {// printout available platforms
+                  std::cout << "Enable " << dev.getInfo<CL_DEVICE_NAME>() << "? (yes/no)" << std::endl;
+                  std::string ans;
+                  std::cin >> ans;
+                  if (ans == std::string("yes"))  {
+                    auto pos = devices.end();
+                    devices.insert(pos, dev);
+                  }
+              }
+            }
+
             if (devices.size() == 0) {
                 std::cout << "no OpenCL devices found!!!" << std::endl << std::endl;
                 return;
             }
-            device = devices[0]; // pick the first one available
 
             
-            try{
-                context = cl::Context(device);
-                queue = cl::CommandQueue(context, device, 0);
+            try {
+              for (auto &dev : devices)
+                contexts.insert(contexts.end(), cl::Context(dev));
+
+              for (auto &dev : devices)
+                for (auto &context : contexts)
+                  queues.insert(queues.end(), cl::CommandQueue(context, dev, 0));
 
             } catch (cl::Error &e) {
                 std::cout << getErrorString(e.err()) << std::endl;
