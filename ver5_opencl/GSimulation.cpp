@@ -227,7 +227,7 @@ void GSimulation :: start()
    }
     )CLC";
 
-    cl::Program program(OpenCL.contexts[0], src_str);
+    cl::Program program(OpenCL.compute_units[0].context, src_str);
     cl::Kernel kernel;
     cl::Buffer particles_pos_x_d;
     cl::Buffer particles_pos_y_d;
@@ -250,19 +250,19 @@ void GSimulation :: start()
         kernel = cl::Kernel(program, "comp"); 
         
         // Make buffer
-        particles_pos_x_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_x);
-        particles_pos_y_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_y);
-        particles_pos_z_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_z);
+        particles_pos_x_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_x);
+        particles_pos_y_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_y);
+        particles_pos_z_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->pos_z);
 
-        particles_vel_x_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_x);
-        particles_vel_y_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_y);
-        particles_vel_z_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_z);
+        particles_vel_x_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_x);
+        particles_vel_y_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_y);
+        particles_vel_z_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->vel_z);
 
-        particles_acc_x_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_x);
-        particles_acc_y_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_y);
-        particles_acc_z_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_z);
+        particles_acc_x_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_x);
+        particles_acc_y_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_y);
+        particles_acc_z_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->acc_z);
 
-        particles_mass_d = cl::Buffer(OpenCL.contexts[0], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->mass);
+        particles_mass_d = cl::Buffer(OpenCL.compute_units[0].context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, n*sizeof(real_type), particles->mass);
 
 
         kernel.setArg(0, particles_pos_x_d);
@@ -304,39 +304,39 @@ void GSimulation :: start()
 
 #if 1
     try {
-   OpenCL.queues[0].enqueueWriteBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
-   OpenCL.queues[0].enqueueWriteBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
-   OpenCL.queues[0].enqueueWriteBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
 
-   OpenCL.queues[0].enqueueWriteBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
-   OpenCL.queues[0].enqueueWriteBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
-   OpenCL.queues[0].enqueueWriteBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
 
-   OpenCL.queues[0].enqueueWriteBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
-   OpenCL.queues[0].enqueueWriteBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
-   OpenCL.queues[0].enqueueWriteBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
 
-   OpenCL.queues[0].enqueueWriteBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+   OpenCL.compute_units[0].queue.enqueueWriteBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
 
    //compute
-   OpenCL.queues[0].enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart), cl::NullRange);
+   OpenCL.compute_units[0].queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(_npart), cl::NullRange);
 
    //read back
-   OpenCL.queues[0].enqueueReadBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
-   OpenCL.queues[0].enqueueReadBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
-   OpenCL.queues[0].enqueueReadBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_pos_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
 
-   OpenCL.queues[0].enqueueReadBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
-   OpenCL.queues[0].enqueueReadBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
-   OpenCL.queues[0].enqueueReadBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_vel_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
 
-   OpenCL.queues[0].enqueueReadBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
-   OpenCL.queues[0].enqueueReadBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
-   OpenCL.queues[0].enqueueReadBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_x_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_y_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_acc_z_d, CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
 
-   OpenCL.queues[0].enqueueReadBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+   OpenCL.compute_units[0].queue.enqueueReadBuffer(particles_mass_d, CL_TRUE, 0, n*sizeof(real_type), particles->mass);
 
-   OpenCL.queues[0].finish();
+   OpenCL.compute_units[0].queue.finish();
 
    energy = 0;
    for (int i = 0; i < _npart; ++i)// update position

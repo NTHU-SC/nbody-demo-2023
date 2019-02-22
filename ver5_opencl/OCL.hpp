@@ -3,68 +3,70 @@
 class OCL
 {
     public:
-        ~OCL() {};
+      ~OCL() {};
 
-//    private:
-         std::vector<cl::Platform> platforms;
-         std::vector<cl::Device> devices;
-         std::vector<cl::Context> contexts;
-         std::vector<cl::CommandQueue> queues;
+      struct  compute_unit {
+        cl::Platform platform;
+        cl::Device device;
+        cl::Context context;
+        cl::CommandQueue queue;
+      };
 
+      std::vector<compute_unit> compute_units;
+
+//                if (platforms.size() == 0) {
+//                    std::cout << "no OpenCL platforms found/selected!!!" << std::endl << std::endl;
+//                    return; 
+//                }
+
+                    //if (devices.size() == 0) {
+                    //    std::cout << "no OpenCL devices found!!!" << std::endl << std::endl;
+                    //    return;
+                    //}
 
     public:
          OCL() {
-            std::vector<cl::Platform> plats;
-            cl::Platform::get(&plats);
-            printf("\nFound %d platforms:\n", plats.size());
-            for (auto &plat : plats)  {// printout available platforms
-                std::cout << "Enable " << plat.getInfo<CL_PLATFORM_NAME>() << "? (yes/no)" << std::endl;
-                std::string ans;
-                std::cin >> ans;
-                if (ans == std::string("yes"))  {
-                  auto pos = platforms.end();
-                  platforms.insert(pos, plat);
-                }
-            }
+           std::vector<cl::Platform> plats;
+           cl::Platform::get(&plats);
+           printf("\nFound %d platforms:\n", plats.size());
+           for (auto &plat : plats)  // printout available platforms
+             std::cout <<  plat.getInfo<CL_PLATFORM_NAME>() << std::endl;
+           std::cout << std::endl;
 
-            if (platforms.size() == 0) {
-                std::cout << "no OpenCL platforms found/selected!!!" << std::endl << std::endl;
-                return; 
-            }
+           for (auto &plat : plats)  {// printout available platforms
+             std::cout << "  Enable " << plat.getInfo<CL_PLATFORM_NAME>() << "? (yes/no)" << std::endl;
+             std::string ans;
+             std::cin >> ans;
+             if (ans == std::string("yes"))  {
+               std::vector<cl::Device> devs;
+               plat.getDevices(CL_DEVICE_TYPE_ALL, &devs);
+               printf("\n        Found %d devices:\n", devs.size());
+               for (auto &dev : devs)  // printout available platforms
+                 std::cout << "        " <<  dev.getInfo<CL_DEVICE_NAME>() << std::endl;
+               std::cout << std::endl;
 
-            for (auto &platform : platforms)  {// printout available platforms
-              std::vector<cl::Device> devs;
-              platform.getDevices(CL_DEVICE_TYPE_ALL, &devs);
-              printf("\nFound %d devices:\n", devs.size());
-              for (auto &dev : devs)  {// printout available platforms
-                  std::cout << "Enable " << dev.getInfo<CL_DEVICE_NAME>() << "? (yes/no)" << std::endl;
-                  std::string ans;
-                  std::cin >> ans;
-                  if (ans == std::string("yes"))  {
-                    auto pos = devices.end();
-                    devices.insert(pos, dev);
-                  }
-              }
-            }
+               for (auto &dev : devs)  {// printout available platforms
+                 std::cout << "        Enable " << dev.getInfo<CL_DEVICE_NAME>() << "? (yes/no)" << std::endl;
+                 std::string ans;
+                 std::cin >> ans;
+                 if (ans == std::string("yes"))  {
+                   try {
+                       auto context = cl::Context(dev);
+                       auto queue = cl::CommandQueue(context, dev, 0);
+                       compute_unit cmp;
+                       cmp.platform = plat;
+                       cmp.device = dev;
+                       cmp.context = context;
+                       cmp.queue = queue;
+                       compute_units.insert(compute_units.end(), cmp);
 
-            if (devices.size() == 0) {
-                std::cout << "no OpenCL devices found!!!" << std::endl << std::endl;
-                return;
-            }
-
-            
-            try {
-              for (auto &dev : devices)
-                contexts.insert(contexts.end(), cl::Context(dev));
-
-              for (auto &dev : devices)
-                for (auto &context : contexts)
-                  queues.insert(queues.end(), cl::CommandQueue(context, dev, 0));
-
-            } catch (cl::Error &e) {
-                std::cout << getErrorString(e.err()) << std::endl;
-            }
-
+                   } catch (cl::Error &e) {
+                       std::cout << getErrorString(e.err()) << std::endl;
+                   }
+                 }
+               }
+             }
+           }
         }
 
          void* add_kernel_file(std::string fun_file) {
