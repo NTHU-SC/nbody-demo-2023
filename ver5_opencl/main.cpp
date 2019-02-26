@@ -33,11 +33,13 @@ int main(int argc, char** argv)
   {
     N=atoi(argv[1]);
     sim.set_number_of_particles(N);  
-    if(argc==3) 
+    if(argc>2) 
     {
       nstep=atoi(argv[2]);
       sim.set_number_of_steps(nstep);  
     }
+    if(argc==4) 
+      sim.set_cpu_ratio(atof(argv[3]));
   }
   
   sim.start();

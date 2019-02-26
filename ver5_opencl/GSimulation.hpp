@@ -35,6 +35,9 @@ public:
   void set_number_of_steps(int N);
   void start();
   void update(real_type dt);
+
+  inline void set_cpu_ratio(const float &cpu_ratio){ _cpu_ratio = cpu_ratio; }
+  inline int get_cpu_ratio() const {return _cpu_ratio; }
   
 private:
   ParticleSoA *particles;
@@ -49,11 +52,14 @@ private:
   
   double _totTime;		//total time of the simulation
   double _totFlops;		//total number of flops 
+
+  float _cpu_ratio = -1.0f;
    
   void init_pos();	
   void init_vel();
   void init_acc();
   void init_mass();
+
     
   inline void set_npart(const int &N){ _npart = N; }
   inline int get_npart() const {return _npart; }
