@@ -38,8 +38,13 @@ int main(int argc, char** argv)
       nstep=atoi(argv[2]);
       sim.set_number_of_steps(nstep);  
     }
-    if(argc==4) 
+    if(argc > 3) 
       sim.set_cpu_ratio(atof(argv[3]));
+
+    if(argc > 4) {
+      sim.set_cpu_wgsize(atoi(argv[4]));
+      sim.set_gpu_wgsize(atoi(argv[5]));
+    }
   }
   
   sim.start();

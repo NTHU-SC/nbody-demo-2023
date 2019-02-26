@@ -202,7 +202,7 @@ void GSimulation :: start()
 	   ax_i+= dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
 	   ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
 	   az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-   }
+ }
 
    barrier(CLK_GLOBAL_MEM_FENCE);
    particles_acc_x[i] = ax_i;
@@ -232,9 +232,18 @@ void GSimulation :: start()
 
     int num_devices = OpenCL.compute_units.size();
 
+    cl::NDRange local[2];
+    if (_cpu_wgsize != 0 and _gpu_wgsize != 0) {
+      local[0] = cl::NDRange(_cpu_wgsize);
+      local[1] = cl::NDRange(_gpu_wgsize);
+      printf("CPU WorkGroup Size:%d\n", _cpu_wgsize);
+      printf("GPU WorkGroup Size:%d\n", _gpu_wgsize);
+    } else {
+      printf("Using automatic WorkGroup sizes\n");
+    }
+
     float cpu_ratio;
-    bool tuning;
-    if (num_devices > 1) {
+    bool tuning; if (num_devices > 1) {
       cpu_ratio = _cpu_ratio;
       tuning = (cpu_ratio < 0);
       if (tuning) cpu_ratio = 0;
@@ -321,6 +330,8 @@ void GSimulation :: start()
 
 
   
+
+
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   {   
@@ -343,37 +354,38 @@ void GSimulation :: start()
        int shr = shares[i];
        int shr_m = shares[i] * sizeof(real_type);
 
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_x_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->pos_x);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_y_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->pos_y);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_z_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->pos_z);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_x_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_x);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_y_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_y);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_z);
 
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_vel_x_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->vel_x);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_vel_y_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->vel_y);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_vel_z_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->vel_z);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_vel_x_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->vel_x);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_vel_y_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->vel_y);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_vel_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->vel_z);
 
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_acc_x_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->acc_x);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_acc_y_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->acc_y);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_acc_z_d[i], CL_TRUE, 0, n*sizeof(real_type), particles->acc_z);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_acc_x_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->acc_x);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_acc_y_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->acc_y);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_acc_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->acc_z);
 
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_mass_d[i],  CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_mass_d[i],  CL_FALSE, 0, n*sizeof(real_type), particles->mass);
+       OpenCL.compute_units[i].queue.finish();
 
        //compute
-       OpenCL.compute_units[i].queue.enqueueNDRangeKernel(kernel[i], cl::NDRange(off), cl::NDRange(shr), cl::NullRange);
+       OpenCL.compute_units[i].queue.enqueueNDRangeKernel(kernel[i], cl::NDRange(off), cl::NDRange(shr), local[i]);
 
        //read back
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_pos_x_d[i], CL_TRUE, off_m, shr_m, off+(particles->pos_x));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_pos_y_d[i], CL_TRUE, off_m, shr_m, off+(particles->pos_y));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_pos_z_d[i], CL_TRUE, off_m, shr_m, off+(particles->pos_z));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_pos_x_d[i], CL_FALSE, off_m, shr_m, off+(particles->pos_x));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_pos_y_d[i], CL_FALSE, off_m, shr_m, off+(particles->pos_y));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_pos_z_d[i], CL_FALSE, off_m, shr_m, off+(particles->pos_z));
 
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_vel_x_d[i], CL_TRUE, off_m, shr_m, off+(particles->vel_x));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_vel_y_d[i], CL_TRUE, off_m, shr_m, off+(particles->vel_y));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_vel_z_d[i], CL_TRUE, off_m, shr_m, off+(particles->vel_z));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_vel_x_d[i], CL_FALSE, off_m, shr_m, off+(particles->vel_x));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_vel_y_d[i], CL_FALSE, off_m, shr_m, off+(particles->vel_y));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_vel_z_d[i], CL_FALSE, off_m, shr_m, off+(particles->vel_z));
 
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_x_d[i], CL_TRUE, off_m, shr_m, off+(particles->acc_x));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_y_d[i], CL_TRUE, off_m, shr_m, off+(particles->acc_y));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_z_d[i], CL_TRUE, off_m, shr_m, off+(particles->acc_z));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_x_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_x));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_y_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_y));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_z_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_z));
 
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_mass_d[i],  CL_TRUE, off_m, shr_m, off+(particles->mass));
+       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_mass_d[i],  CL_FALSE, off_m, shr_m, off+(particles->mass));
      }
 
      // flush devices

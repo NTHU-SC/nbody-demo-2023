@@ -34,10 +34,11 @@ class OCL
            std::cout << std::endl;
 
            for (auto &plat : plats)  {// printout available platforms
-             std::cout << "  Enable " << plat.getInfo<CL_PLATFORM_NAME>() << "? (yes/no)" << std::endl;
-             std::string ans;
-             std::cin >> ans;
-             if (ans == std::string("yes"))  {
+             //std::cout << "  Enable " << plat.getInfo<CL_PLATFORM_NAME>() << "? (yes/no)" << std::endl;
+             //std::string ans;
+             //std::cin >> ans;
+             //if (ans == std::string("yes"))  {
+             if (true)  {
                std::vector<cl::Device> devs;
                plat.getDevices(CL_DEVICE_TYPE_ALL, &devs);
                printf("\n        Found %d devices:\n", devs.size());

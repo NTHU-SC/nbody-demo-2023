@@ -37,6 +37,8 @@ public:
   void update(real_type dt);
 
   inline void set_cpu_ratio(const float &cpu_ratio){ _cpu_ratio = cpu_ratio; }
+  inline void set_cpu_wgsize(const int &cpu_wgsize){ _cpu_wgsize = cpu_wgsize; }
+  inline void set_gpu_wgsize(const int &gpu_wgsize){ _gpu_wgsize = gpu_wgsize; }
   inline int get_cpu_ratio() const {return _cpu_ratio; }
   
 private:
@@ -54,6 +56,8 @@ private:
   double _totFlops;		//total number of flops 
 
   float _cpu_ratio = -1.0f;
+  int _cpu_wgsize = 0;
+  int _gpu_wgsize = 0;
    
   void init_pos();	
   void init_vel();
