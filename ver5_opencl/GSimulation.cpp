@@ -145,14 +145,12 @@ void GSimulation :: start()
   double av=0.0, dev=0.0;
   int nf = 0;
 
-
-
   OCL::OCL OpenCL = OCL::OCL();  // initialize OpenCL environment w/default settings
 
+  // Kernel Source
   std::string src_str = R"CLC(
    #include <Constants.hpp>
    #include <types.hpp>
-   //#include <Particle.hpp>
    __kernel void comp(
        __global real_type* particles_pos_x, 
        __global real_type* particles_pos_y, 
@@ -173,16 +171,6 @@ void GSimulation :: start()
        ) 
    {
    int i = get_global_id(0);
-/*#ifdef ASALIGN
-   __assume_aligned(particles->pos_x, ALIGNMENT);
-   __assume_aligned(particles_pos_y, ALIGNMENT);
-   __assume_aligned(particles_pos_z, ALIGNMENT);
-   __assume_aligned(particles_acc_x, ALIGNMENT);
-   __assume_aligned(particles_acc_y, ALIGNMENT);
-   __assume_aligned(particles_acc_z, ALIGNMENT);
-   __assume_aligned(particles_mass, ALIGNMENT);
-#endif
-*/
    real_type ax_i = particles_acc_x[i];
    real_type ay_i = particles_acc_y[i];
    real_type az_i = particles_acc_z[i];
@@ -208,30 +196,20 @@ void GSimulation :: start()
    particles_acc_x[i] = ax_i;
    particles_acc_y[i] = ay_i;
    particles_acc_z[i] = az_i;
-
-
-//   barrier(CLK_GLOBAL_MEM_FENCE);
-//   particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
-//   particles_vel_y[i] += particles_acc_y[i] * dt; //2flops
-//   particles_vel_z[i] += particles_acc_z[i] * dt; //2flops
-//  
-//   particles_pos_x[i] += particles_vel_x[i] * dt; //2flops
-//   particles_pos_y[i] += particles_vel_y[i] * dt; //2flops
-//   particles_pos_z[i] += particles_vel_z[i] * dt; //2flops
-//
-//   particles_acc_x[i] = 0.;
-//   particles_acc_y[i] = 0.;
-//   particles_acc_z[i] = 0.;
-//   barrier(CLK_GLOBAL_MEM_FENCE);
- 
-  
-
    }
     )CLC";
 
-
     int num_devices = OpenCL.compute_units.size();
 
+    /* Set up workgroup sizes
+     * very naive implementaiton assuming device[0] is CPU
+     * and device[1] is GPU. If using 1 device, say only GPU
+     * which is normally the 2nd platform that's found it's
+     * best to use the same wgsize arguments:
+     * ./nbody.x 2000 5000 -1 256 256
+     * -1 for no tuning of work-split
+     *  256 local size for all devices. Currently max of 2
+     */
     cl::NDRange local[2];
     if (_cpu_wgsize != 0 and _gpu_wgsize != 0) {
       local[0] = cl::NDRange(_cpu_wgsize);
@@ -242,6 +220,11 @@ void GSimulation :: start()
       printf("Using automatic WorkGroup sizes\n");
     }
 
+    /* Set work ratio between CPU/GPU
+     * if no arg is passed it will test all
+     * if -1 is passed it will test all
+     * else, use the provided ratio
+     */
     float cpu_ratio;
     bool tuning; if (num_devices > 1) {
       cpu_ratio = _cpu_ratio;
@@ -254,11 +237,13 @@ void GSimulation :: start()
 
     cl::Program program[num_devices];
 
+    // data/array offsets for splitting work CPU/GPU
     size_t* shares = new size_t(num_devices);
     size_t* offsets = new size_t(num_devices);
 
     for (int i = 0; i < num_devices; i++) 
       program[i] = cl::Program(OpenCL.compute_units[i].context, src_str);
+
     cl::Kernel kernel[num_devices];
     cl::Buffer particles_pos_x_d[num_devices];
     cl::Buffer particles_pos_y_d[num_devices];
@@ -275,6 +260,7 @@ void GSimulation :: start()
     cl::Buffer particles_mass_d[num_devices];
     for (int i = 0; i < num_devices; i++) {
     try {
+        // since 2 platforms, have to build the same kernel twice
         program[i].build("-cl-std=CL2.0");
         auto buildInfo = program[i].getBuildInfo<CL_PROGRAM_BUILD_LOG>();
         for (auto &pair : buildInfo)
@@ -329,9 +315,6 @@ void GSimulation :: start()
     }
 
 
-  
-
-
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   {   
@@ -346,6 +329,7 @@ void GSimulation :: start()
    energy = 0;
 
 
+// set to 0 for fallback to original CPU implementaiton
 #if 1
    try {
      for (int i = 0; i < num_devices; i++) {
@@ -354,6 +338,7 @@ void GSimulation :: start()
        int shr = shares[i];
        int shr_m = shares[i] * sizeof(real_type);
 
+       //the nature of the kernel requires the full write
        OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_x_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_x);
        OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_y_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_y);
        OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_z);
@@ -367,7 +352,7 @@ void GSimulation :: start()
        OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_acc_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->acc_z);
 
        OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_mass_d[i],  CL_FALSE, 0, n*sizeof(real_type), particles->mass);
-       OpenCL.compute_units[i].queue.finish();
+       OpenCL.compute_units[i].queue.finish(); // need this because using non-blocking writes
 
        //compute
        OpenCL.compute_units[i].queue.enqueueNDRangeKernel(kernel[i], cl::NDRange(off), cl::NDRange(shr), local[i]);
@@ -389,8 +374,8 @@ void GSimulation :: start()
      }
 
      // flush devices
-     for (int i = 0; i < num_devices; i++) 
-       OpenCL.compute_units[i].queue.finish();
+     for (int i = 0; i < num_devices; i++)  
+       OpenCL.compute_units[i].queue.finish(); // need this because using non-blocking reads
 
    } catch (cl::Error &e) {
        // Print build info for all devices
