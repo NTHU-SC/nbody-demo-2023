@@ -108,9 +108,9 @@ void GSimulation :: start()
     //cycle through GPUs
     for (auto &dev : plat.get_devices(info::device_type::gpu))
       queues.insert(queues.begin(), queue(dev));
-    //cycle through CPUs
-    for (auto &dev : plat.get_devices(info::device_type::cpu))
-      queues.insert(queues.begin(), queue(dev));
+//    //cycle through CPUs
+//    for (auto &dev : plat.get_devices(info::device_type::cpu))
+//      queues.insert(queues.begin(), queue(dev));
   }
 
   for (auto &q : queues)
@@ -124,9 +124,9 @@ void GSimulation :: start()
 
   float ratio = get_workshare();
   int n_share[2] = {int(n * ratio), n - int(n * ratio)};
+  int n_offset[2] = {0, n_share[0]};
   std::cout << n_share[0] << std::endl;
   std::cout << n_share[1] << std::endl;
-  int n_offset[2] = {0, n_share[0]};
 //  int n_share[2] = {n, 0};
 //  int n_offset[2] = {0, n-n_share[0]};
  
@@ -239,53 +239,68 @@ void GSimulation :: start()
        }); // end of command group scope
   }
 
-  for (int i = 0; i < queues.size(); i++) {
-    q = queues[i];
-    q.submit([&] (handler& cgh)  {
-       auto particles_acc_x = particles_acc_x_d.get_access<access::mode::write>(cgh);
-       auto particles_acc_y = particles_acc_y_d.get_access<access::mode::write>(cgh);
-       auto particles_acc_z = particles_acc_z_d.get_access<access::mode::write>(cgh);
-
-       auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read_write>(cgh);
-       auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read_write>(cgh);
-       auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read_write>(cgh);
-
-       auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read_write>(cgh);
-       auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read_write>(cgh);
-       auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read_write>(cgh);
-
-
-       cgh.parallel_for<class update_energy>(
-         nd_range<1>(range<1>(n_share[i]), range<1>(), range<1>(n_offset[i])), [=](nd_item<1> item) {
-         auto i = item.get_global_id(0);
-
-     particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
-     particles_vel_y[i] += particles_acc_y[i] * dt; //2flops
-     particles_vel_z[i] += particles_acc_z[i] * dt; //2flops
-	  
-     particles_pos_x[i] += particles_vel_x[i] * dt; //2flops
-     particles_pos_y[i] += particles_vel_y[i] * dt; //2flops
-     particles_pos_z[i] += particles_vel_z[i] * dt; //2flops
-
-
-         particles_acc_x[i] = 0.;
-         particles_acc_y[i] = 0.;
-         particles_acc_z[i] = 0.;
-         });
-       }); 
-   } // end of queues
-   }
+//  for (int i = 0; i < queues.size(); i++) {
+//    q = queues[i];
+//    q.submit([&] (handler& cgh)  {
+//       auto particles_acc_x = particles_acc_x_d.get_access<access::mode::write>(cgh);
+//       auto particles_acc_y = particles_acc_y_d.get_access<access::mode::write>(cgh);
+//       auto particles_acc_z = particles_acc_z_d.get_access<access::mode::write>(cgh);
+//
+//       auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read_write>(cgh);
+//       auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read_write>(cgh);
+//       auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read_write>(cgh);
+//
+//       auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read_write>(cgh);
+//       auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read_write>(cgh);
+//       auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read_write>(cgh);
+//
+//
+//       cgh.parallel_for<class update_energy>(
+//         nd_range<1>(range<1>(n_share[i]), range<1>(), range<1>(n_offset[i])), [=](nd_item<1> item) {
+//         auto i = item.get_global_id(0);
+//
+//     particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
+//     particles_vel_y[i] += particles_acc_y[i] * dt; //2flops
+//     particles_vel_z[i] += particles_acc_z[i] * dt; //2flops
+//	  
+//     particles_pos_x[i] += particles_vel_x[i] * dt; //2flops
+//     particles_pos_y[i] += particles_vel_y[i] * dt; //2flops
+//     particles_pos_z[i] += particles_vel_z[i] * dt; //2flops
+//
+//
+//         particles_acc_x[i] = 0.;
+//         particles_acc_y[i] = 0.;
+//         particles_acc_z[i] = 0.;
+//         });
+//       }); 
+//   } // end of queues
+   } // end of buffer scope
 
    energy = 0;
-   for (i = 0; i < n; ++i)// update position
+
+   for (int i = 0; i < n; ++i)// update position
+   {
+     particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
+     particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
+     particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
+	  
+     particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
+     particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
+     particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
+
+//     no need since OCL overwrites
+     particles->acc_x[i] = 0.;
+     particles->acc_y[i] = 0.;
+     particles->acc_z[i] = 0.;
+	
      energy += particles->mass[i] * (
 	       particles->vel_x[i]*particles->vel_x[i] + 
                particles->vel_y[i]*particles->vel_y[i] +
                particles->vel_z[i]*particles->vel_z[i]); //7flops
-
-
+   }
   
     _kenergy = 0.5 * energy; 
+
     
     ts1 += time.stop();
     if(!(s%get_sfreq()) ) 
