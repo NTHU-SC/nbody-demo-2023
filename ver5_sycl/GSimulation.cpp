@@ -121,7 +121,8 @@ void GSimulation :: start()
   real_type dt = get_tstep();
   int n = get_npart();
   int i;
-  int n_share[2] = {0, n};
+  int n_share[2] = {n, 0};
+  int n_offset[2] = {0, n-n_share[0]};
  
   const int alignment = 32;
   particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
@@ -199,8 +200,9 @@ void GSimulation :: start()
        auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
 
 
-       cgh.parallel_for<class update_accel>(range<1>(n_share[i]), [=](item<1> item) {
-         auto i = item.get_linear_id();
+       cgh.parallel_for<class update_accel>(
+         nd_range<1>(range<1>(n_share[i]), range<1>(), range<1>(n_offset[i])), [=](nd_item<1> item) {
+         auto i = item.get_global_id(0);
 
      real_type ax_i = particles_acc_x[i];
      real_type ay_i = particles_acc_y[i];
@@ -247,8 +249,9 @@ void GSimulation :: start()
        auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read_write>(cgh);
 
 
-       cgh.parallel_for<class update_energy>(range<1>(n_share[i]), [=](item<1> item) {
-         auto i = item.get_linear_id();
+       cgh.parallel_for<class update_energy>(
+         nd_range<1>(range<1>(n_share[i]), range<1>(), range<1>(n_offset[i])), [=](nd_item<1> item) {
+         auto i = item.get_global_id(0);
 
      particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
      particles_vel_y[i] += particles_acc_y[i] * dt; //2flops
