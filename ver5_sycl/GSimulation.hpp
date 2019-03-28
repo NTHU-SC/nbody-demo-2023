@@ -43,6 +43,10 @@ public:
   void set_number_of_particles(int N);
   void set_number_of_steps(int N);
   void start();
+
+  float _workshare;
+  void set_workshare(const float &N){ _workshare = N; }
+  float get_workshare() const {return _workshare; }
   
 private:
   ParticleSoA *particles;
@@ -62,6 +66,7 @@ private:
   void init_vel();
   void init_acc();
   void init_mass();
+
     
   inline void set_npart(const int &N){ _npart = N; }
   inline int get_npart() const {return _npart; }
