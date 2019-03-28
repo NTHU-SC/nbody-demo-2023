@@ -121,8 +121,14 @@ void GSimulation :: start()
   real_type dt = get_tstep();
   int n = get_npart();
   int i;
-  int n_share[2] = {n, 0};
-  int n_offset[2] = {0, n-n_share[0]};
+
+  float ratio = get_workshare();
+  int n_share[2] = {int(n * ratio), n - int(n * ratio)};
+  std::cout << n_share[0] << std::endl;
+  std::cout << n_share[1] << std::endl;
+  int n_offset[2] = {0, n_share[0]};
+//  int n_share[2] = {n, 0};
+//  int n_offset[2] = {0, n-n_share[0]};
  
   const int alignment = 32;
   particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
