@@ -99,7 +99,25 @@ void GSimulation :: init_mass()
 void GSimulation :: start() 
 {
 
-  queue q(gpu_selector{});
+  // Create a queue vector. We'll cycle through platforms/devices 
+  // CPU and GPU separately to avoid SYCL_host platform
+  std::vector<queue> queues;
+  // cycle through all OpenCL platforms
+  std::vector<platform> platforms = platform().get_platforms();
+  for (auto &plat : platforms) {
+    //cycle through CPUs
+    for (auto &dev : plat.get_devices(info::device_type::cpu)) {
+      std::cout << dev.get_info<info::device::name>() << std::endl;
+      queues.insert(queues.begin(), queue(dev));
+    }
+    //cycle through GPUs
+    for (auto &dev : plat.get_devices(info::device_type::gpu)) {
+      std::cout << dev.get_info<info::device::name>() << std::endl;
+      queues.insert(queues.begin(), queue(dev));
+    }
+  }
+
+  queue q = queue(cpu_selector{});
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
