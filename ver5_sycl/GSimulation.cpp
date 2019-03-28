@@ -121,6 +121,7 @@ void GSimulation :: start()
   real_type dt = get_tstep();
   int n = get_npart();
   int i;
+  int n_share[2] = {0, n};
  
   const int alignment = 32;
   particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
@@ -181,7 +182,7 @@ void GSimulation :: start()
 
 
   for (int i = 0; i < queues.size(); i++) {
-    q = queues[0];
+    q = queues[i];
     q.submit([&] (handler& cgh)  {
        auto particles_acc_x = particles_acc_x_d.get_access<access::mode::read_write>(cgh);
        auto particles_acc_y = particles_acc_y_d.get_access<access::mode::read_write>(cgh);
@@ -198,7 +199,7 @@ void GSimulation :: start()
        auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
 
 
-       cgh.parallel_for<class update_accel>(range<1>(n), [=](item<1> item) {
+       cgh.parallel_for<class update_accel>(range<1>(n_share[i]), [=](item<1> item) {
          auto i = item.get_linear_id();
 
      real_type ax_i = particles_acc_x[i];
@@ -231,7 +232,7 @@ void GSimulation :: start()
   }
 
   for (int i = 0; i < queues.size(); i++) {
-    q = queues[0];
+    q = queues[i];
     q.submit([&] (handler& cgh)  {
        auto particles_acc_x = particles_acc_x_d.get_access<access::mode::write>(cgh);
        auto particles_acc_y = particles_acc_y_d.get_access<access::mode::write>(cgh);
@@ -246,7 +247,7 @@ void GSimulation :: start()
        auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read_write>(cgh);
 
 
-       cgh.parallel_for<class update_mass>(range<1>(n), [=](item<1> item) {
+       cgh.parallel_for<class update_energy>(range<1>(n_share[i]), [=](item<1> item) {
          auto i = item.get_linear_id();
 
      particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
