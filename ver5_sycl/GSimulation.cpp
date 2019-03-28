@@ -108,9 +108,9 @@ void GSimulation :: start()
     //cycle through GPUs
     for (auto &dev : plat.get_devices(info::device_type::gpu))
       queues.insert(queues.begin(), queue(dev));
-//    //cycle through CPUs
-//    for (auto &dev : plat.get_devices(info::device_type::cpu))
-//      queues.insert(queues.begin(), queue(dev));
+    //cycle through CPUs
+    for (auto &dev : plat.get_devices(info::device_type::cpu))
+      queues.insert(queues.begin(), queue(dev));
   }
 
   for (auto &q : queues)
@@ -207,8 +207,8 @@ void GSimulation :: start()
 
 
        cgh.parallel_for<class update_accel>(
-         nd_range<1>(range<1>(n_share[i]), range<1>(), range<1>(n_offset[i])), [=](nd_item<1> item) {
-         auto i = item.get_global_id(0);
+         range<1>(range<1>(n_share[i])), id<1>(n_offset[i]), [=](item<1> item) {
+         auto i = item.get_linear_id();
 
      real_type ax_i = particles_acc_x[i];
      real_type ay_i = particles_acc_y[i];
