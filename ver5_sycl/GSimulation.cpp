@@ -105,19 +105,18 @@ void GSimulation :: start()
   // cycle through all OpenCL platforms
   std::vector<platform> platforms = platform().get_platforms();
   for (auto &plat : platforms) {
-    //cycle through CPUs
-    for (auto &dev : plat.get_devices(info::device_type::cpu)) {
-      std::cout << dev.get_info<info::device::name>() << std::endl;
-      queues.insert(queues.begin(), queue(dev));
-    }
     //cycle through GPUs
-    for (auto &dev : plat.get_devices(info::device_type::gpu)) {
-      std::cout << dev.get_info<info::device::name>() << std::endl;
+    for (auto &dev : plat.get_devices(info::device_type::gpu))
       queues.insert(queues.begin(), queue(dev));
-    }
+    //cycle through CPUs
+    for (auto &dev : plat.get_devices(info::device_type::cpu))
+      queues.insert(queues.begin(), queue(dev));
   }
 
-  queue q = queue(cpu_selector{});
+  for (auto &q : queues)
+      std::cout << q.get_device().get_info<info::device::name>() << std::endl;
+
+  queue q; // = queue(cpu_selector{});
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
@@ -181,6 +180,8 @@ void GSimulation :: start()
   buffer<real_type, 1> particles_mass_d(particles->mass, range<1>(n));
 
 
+  for (int i = 0; i < queues.size(); i++) {
+    q = queues[0];
     q.submit([&] (handler& cgh)  {
        auto particles_acc_x = particles_acc_x_d.get_access<access::mode::read_write>(cgh);
        auto particles_acc_y = particles_acc_y_d.get_access<access::mode::read_write>(cgh);
@@ -225,9 +226,12 @@ void GSimulation :: start()
      particles_acc_y[i] = ay_i;
      particles_acc_z[i] = az_i;
 
-         });
-       });
+         }); // end of parallel for scope
+       }); // end of command group scope
+  }
 
+  for (int i = 0; i < queues.size(); i++) {
+    q = queues[0];
     q.submit([&] (handler& cgh)  {
        auto particles_acc_x = particles_acc_x_d.get_access<access::mode::write>(cgh);
        auto particles_acc_y = particles_acc_y_d.get_access<access::mode::write>(cgh);
@@ -258,7 +262,8 @@ void GSimulation :: start()
          particles_acc_y[i] = 0.;
          particles_acc_z[i] = 0.;
          });
-       });
+       }); 
+   } // end of queues
    }
 
    energy = 0;
