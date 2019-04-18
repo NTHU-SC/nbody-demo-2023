@@ -45,7 +45,18 @@ public:
   void start();
   
 private:
-  ParticleSoA *particles;
+  //ParticleSoA *particles;
+  real_type* particles_pos_x;
+  real_type* particles_pos_y;
+  real_type* particles_pos_z;
+  real_type* particles_vel_x;
+  real_type* particles_vel_y;
+  real_type* particles_vel_z;
+  real_type* particles_acc_x;
+  real_type* particles_acc_y;
+  real_type* particles_acc_z;
+  real_type* particles_mass;
+
   
   int       _npart;		//number of particles
   int	    _nsteps;		//number of integration steps

@@ -49,9 +49,9 @@ void GSimulation :: init_pos()
 
   for(int i=0; i<get_npart(); ++i)
   {
-    particles->pos_x[i] = unif_d(gen);
-    particles->pos_y[i] = unif_d(gen);
-    particles->pos_z[i] = unif_d(gen);
+    particles_pos_x[i] = unif_d(gen);
+    particles_pos_y[i] = unif_d(gen);
+    particles_pos_z[i] = unif_d(gen);
   }
 }
 
@@ -63,9 +63,9 @@ void GSimulation :: init_vel()
 
   for(int i=0; i<get_npart(); ++i)
   {
-    particles->vel_x[i] = unif_d(gen) * 1.0e-3f;
-    particles->vel_y[i] = unif_d(gen) * 1.0e-3f;
-    particles->vel_z[i] = unif_d(gen) * 1.0e-3f;
+    particles_vel_x[i] = unif_d(gen) * 1.0e-3f;
+    particles_vel_y[i] = unif_d(gen) * 1.0e-3f;
+    particles_vel_z[i] = unif_d(gen) * 1.0e-3f;
   }
 }
 
@@ -73,9 +73,9 @@ void GSimulation :: init_acc()
 {
   for(int i=0; i<get_npart(); ++i)
   {
-    particles->acc_x[i] = 0.f;
-    particles->acc_y[i] = 0.f;
-    particles->acc_z[i] = 0.f;
+    particles_acc_x[i] = 0.f;
+    particles_acc_y[i] = 0.f;
+    particles_acc_z[i] = 0.f;
   }
 }
 
@@ -88,7 +88,7 @@ void GSimulation :: init_mass()
 
   for(int i=0; i<get_npart(); ++i)
   {
-    particles->mass[i] = n * unif_d(gen);
+    particles_mass[i] = n * unif_d(gen);
   }
 }
 
@@ -100,18 +100,18 @@ void GSimulation :: start()
   int i,j;
  
   const int alignment = 32;
-  particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
+  //particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
 
-  particles->pos_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->pos_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->pos_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->mass  = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_pos_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_pos_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_pos_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_vel_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_vel_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_vel_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_acc_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_acc_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_acc_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles_mass  = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
  
   init_pos();	
   init_vel();
@@ -137,62 +137,70 @@ void GSimulation :: start()
   for (int s=1; s<=get_nsteps(); ++s)
   {   
    ts0 += time.start(); 
+
+
+#pragma omp target teams distribute parallel for map(tofrom: \
+particles_pos_x[:n], \
+particles_pos_y[:n], \
+particles_pos_z[:n], \
+particles_vel_x[:n], \
+particles_vel_y[:n], \
+particles_vel_z[:n], \
+particles_acc_x[:n], \
+particles_acc_y[:n], \
+particles_acc_z[:n], \
+particles_mass [:n]) \
+   
+{
+
    for (i = 0; i < n; i++)// update acceleration
    {
-#ifdef ASALIGN
-     __assume_aligned(particles->pos_x, alignment);
-     __assume_aligned(particles->pos_y, alignment);
-     __assume_aligned(particles->pos_z, alignment);
-     __assume_aligned(particles->acc_x, alignment);
-     __assume_aligned(particles->acc_y, alignment);
-     __assume_aligned(particles->acc_z, alignment);
-     __assume_aligned(particles->mass, alignment);
-#endif
-     real_type ax_i = particles->acc_x[i];
-     real_type ay_i = particles->acc_y[i];
-     real_type az_i = particles->acc_z[i];
-#pragma omp simd reduction(+:ax_i,ay_i,az_i)
+     real_type ax_i = particles_acc_x[i];
+     real_type ay_i = particles_acc_y[i];
+     real_type az_i = particles_acc_z[i];
+//#pragma omp parallel for reduction(+:ax_i,ay_i,az_i)
      for (j = 0; j < n; j++)
      {
          real_type dx, dy, dz;
 	 real_type distanceSqr = 0.0f;
 	 real_type distanceInv = 0.0f;
 		  
-	 dx = particles->pos_x[j] - particles->pos_x[i];	//1flop
-	 dy = particles->pos_y[j] - particles->pos_y[i];	//1flop	
-	 dz = particles->pos_z[j] - particles->pos_z[i];	//1flop
+	 dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
+	 dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
+	 dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
 	
  	 distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	 distanceInv = 1.0f / sqrtf(distanceSqr);			//1div+1sqrt
+ 	 distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
-	 ax_i+= dx * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	 ay_i += dy * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	 az_i += dz * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	 ax_i+= dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	 ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	 az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
      }
-     particles->acc_x[i] = ax_i;
-     particles->acc_y[i] = ay_i;
-     particles->acc_z[i] = az_i;
+     particles_acc_x[i] = ax_i;
+     particles_acc_y[i] = ay_i;
+     particles_acc_z[i] = az_i;
    }
+} //end target
    energy = 0;
 
    for (i = 0; i < n; ++i)// update position
    {
-     particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
-     particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
-     particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
+     particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
+     particles_vel_y[i] += particles_acc_y[i] * dt; //2flops
+     particles_vel_z[i] += particles_acc_z[i] * dt; //2flops
 	  
-     particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
-     particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
-     particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
+     particles_pos_x[i] += particles_vel_x[i] * dt; //2flops
+     particles_pos_y[i] += particles_vel_y[i] * dt; //2flops
+     particles_pos_z[i] += particles_vel_z[i] * dt; //2flops
 
-     particles->acc_x[i] = 0.;
-     particles->acc_y[i] = 0.;
-     particles->acc_z[i] = 0.;
+     particles_acc_x[i] = 0.;
+     particles_acc_y[i] = 0.;
+     particles_acc_z[i] = 0.;
 	
-     energy += particles->mass[i] * (
-	       particles->vel_x[i]*particles->vel_x[i] + 
-               particles->vel_y[i]*particles->vel_y[i] +
-               particles->vel_z[i]*particles->vel_z[i]); //7flops
+     energy += particles_mass[i] * (
+	       particles_vel_x[i]*particles_vel_x[i] + 
+               particles_vel_y[i]*particles_vel_y[i] +
+               particles_vel_z[i]*particles_vel_z[i]); //7flops
    }
   
     _kenergy = 0.5 * energy; 
@@ -260,16 +268,16 @@ void GSimulation :: print_header()
 
 GSimulation :: ~GSimulation()
 {
-  _mm_free(particles->pos_x);
-  _mm_free(particles->pos_y);
-  _mm_free(particles->pos_z);
-  _mm_free(particles->vel_x);
-  _mm_free(particles->vel_y);
-  _mm_free(particles->vel_z);
-  _mm_free(particles->acc_x);
-  _mm_free(particles->acc_y);
-  _mm_free(particles->acc_z);
-  _mm_free(particles->mass);
-  _mm_free(particles);
+  _mm_free(particles_pos_x);
+  _mm_free(particles_pos_y);
+  _mm_free(particles_pos_z);
+  _mm_free(particles_vel_x);
+  _mm_free(particles_vel_y);
+  _mm_free(particles_vel_z);
+  _mm_free(particles_acc_x);
+  _mm_free(particles_acc_y);
+  _mm_free(particles_acc_z);
+  _mm_free(particles_mass);
+  //_mm_free(particles);
 
 }
