@@ -139,17 +139,17 @@ void GSimulation :: start()
    ts0 += time.start(); 
 
 
-#pragma omp target teams distribute parallel for map(tofrom: \
-particles_pos_x[:n], \
-particles_pos_y[:n], \
-particles_pos_z[:n], \
-particles_vel_x[:n], \
-particles_vel_y[:n], \
-particles_vel_z[:n], \
-particles_acc_x[:n], \
-particles_acc_y[:n], \
-particles_acc_z[:n], \
-particles_mass [:n]) \
+#pragma omp target teams distribute parallel for \
+map(to: particles_pos_x[:n]) \
+map(to: particles_pos_y[:n]) \
+map(to: particles_pos_z[:n]) \
+map(to: particles_vel_x[:n]) \
+map(to: particles_vel_y[:n]) \
+map(to: particles_vel_z[:n]) \
+map(tofrom: particles_acc_x[:n]) \
+map(tofrom: particles_acc_y[:n]) \
+map(tofrom: particles_acc_z[:n]) \
+map(to: particles_mass [:n]) \
    
 {
 
@@ -158,7 +158,7 @@ particles_mass [:n]) \
      real_type ax_i = particles_acc_x[i];
      real_type ay_i = particles_acc_y[i];
      real_type az_i = particles_acc_z[i];
-//#pragma omp parallel for reduction(+:ax_i,ay_i,az_i)
+#pragma omp simd reduction(+:ax_i,ay_i,az_i)
      for (j = 0; j < n; j++)
      {
          real_type dx, dy, dz;
