@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 {
   int N;			//number of particles
   int nstep; 		//number ot integration steps
-  float ratio; //% of work to be done on CPU
+  float ratio=1.0f; //% of work to be done on CPU
   
   GSimulation sim;
     
@@ -41,9 +41,9 @@ int main(int argc, char** argv)
     }
     if(argc==4) 
       ratio = atof(argv[3]);
-      sim.set_workshare(ratio);
   }
   
+  sim.set_workshare(ratio);
   sim.start();
 
   return 0;
