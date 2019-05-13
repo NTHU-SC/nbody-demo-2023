@@ -1,7 +1,7 @@
 CXX = clang++
 COMPFLAGS = -g -std=c++11 -O2 -DASALIGN 
 OPTFLAGS = #-xHost
-OMPFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60
+OMPFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 -ffast-math -Wdeprecated
 REPFLAGS = #-qopt-report=5 -qopt-report-filter="GSimulation.cpp,130-220" 
 INCLUDES = 
 
