@@ -1,5 +1,5 @@
 CXX = icpc
-COMPFLAGS = -g -std=c++11 -O2 -DASALIGN -I$(OPENCL)/include  -L$(OPENCL)/lib64 -lOpenCL
+COMPFLAGS = -g -std=c++11 -O2 -DASALIGN -lOpenCL
 OPTFLAGS = -xhost
 OMPFLAGS = -qopenmp-simd
 REPFLAGS = -qopt-report=5 -qopt-report-filter="GSimulation.cpp,130-220" 

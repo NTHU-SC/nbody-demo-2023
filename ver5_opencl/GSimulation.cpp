@@ -261,7 +261,7 @@ void GSimulation :: start()
     for (int i = 0; i < num_devices; i++) {
     try {
         // since 2 platforms, have to build the same kernel twice
-        program[i].build("-cl-std=CL2.0");
+        program[i].build("-g -cl-std=CL2.0");
         auto buildInfo = program[i].getBuildInfo<CL_PROGRAM_BUILD_LOG>();
         for (auto &pair : buildInfo)
             std::cerr << pair.second << std::endl << std::endl;
