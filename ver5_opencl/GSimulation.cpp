@@ -145,11 +145,11 @@ void GSimulation :: start()
   double av=0.0, dev=0.0;
   int nf = 0;
 
-  OCL::OCL OpenCL = OCL::OCL();  // initialize OpenCL environment w/default settings
+  std::cout << "device option: " << get_devices() << std::endl;
+  OCL::OCL OpenCL = OCL::OCL(get_devices());  // initialize OpenCL environment w/default settings
 
   // Kernel Source
   std::string src_str = R"CLC(
-   #include <Constants.hpp>
    #include <types.hpp>
    __kernel void comp(
        __global real_type* particles_pos_x, 
@@ -170,6 +170,8 @@ void GSimulation :: start()
        int n
        ) 
    {
+   const float softeningSquared = 1.e-3f;
+   const float G = 6.67259e-11f;
    int i = get_global_id(0);
    real_type ax_i = 0;
    real_type ay_i = 0;
@@ -185,14 +187,15 @@ void GSimulation :: start()
 	   dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
 	
  	   distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	   distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+ 	   //distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+ 	   distanceInv = 1.2f;
 
 	   ax_i+= dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
 	   ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
 	   az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
  }
 
-   barrier(CLK_GLOBAL_MEM_FENCE);
+   //barrier(CLK_GLOBAL_MEM_FENCE);
    particles_acc_x[i] = ax_i;
    particles_acc_y[i] = ay_i;
    particles_acc_z[i] = az_i;
@@ -261,10 +264,12 @@ void GSimulation :: start()
     for (int i = 0; i < num_devices; i++) {
     try {
         // since 2 platforms, have to build the same kernel twice
-        program[i].build("-g -cl-std=CL2.0");
+        program[i].build("");
+#ifdef USE_OCL_2
         auto buildInfo = program[i].getBuildInfo<CL_PROGRAM_BUILD_LOG>();
         for (auto &pair : buildInfo)
             std::cerr << pair.second << std::endl << std::endl;
+#endif
         kernel[i] = cl::Kernel(program[i], "comp"); 
         
         // Make buffer
@@ -305,10 +310,11 @@ void GSimulation :: start()
         printf("failed to setup the ocl kernel\n");
         // Print build info for all devices
         cl_int buildErr;
-        auto buildInfo = program[i].getBuildInfo<CL_PROGRAM_BUILD_LOG>(&buildErr);
-        for (auto &pair : buildInfo) {
-            std::cerr << pair.second << std::endl << std::endl;
-        }
+        auto buildInfo = program[i].getBuildInfo<CL_PROGRAM_BUILD_LOG>(OpenCL.compute_units[i].device);
+//        for (auto &pair : buildInfo) {
+//            std::cerr << pair.second << std::endl << std::endl;
+//        }
+        std::cout << buildInfo << std::endl;
         std::cout << OCL::getErrorString(e.err()) << std::endl;
         return;
     }
@@ -333,7 +339,7 @@ void GSimulation :: start()
 
 
 // set to 0 for fallback to original CPU implementaiton
-#if 1
+#if 0
    try {
      for (int i = 0; i < num_devices; i++) {
        int off = offsets[i];
@@ -347,10 +353,8 @@ void GSimulation :: start()
        OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_z);
        OpenCL.compute_units[i].queue.finish(); // need this because using non-blocking writes
 
-       //compute
        OpenCL.compute_units[i].queue.enqueueNDRangeKernel(kernel[i], cl::NDRange(off), cl::NDRange(shr), local[i]);
 
-       //read back
        OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_x_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_x));
        OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_y_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_y));
        OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_z_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_z));
@@ -363,15 +367,15 @@ void GSimulation :: start()
        OpenCL.compute_units[i].queue.finish(); // need this because using non-blocking reads
 
    } catch (cl::Error &e) {
-       // Print build info for all devices
+       // print build info for all devices
 
-       std::cout << "Failed to launch kernel" << std::endl;
-       std::cout << OCL::getErrorString(e.err()) << std::endl;
+       std::cout << "failed to launch kernel" << std::endl;
+       std::cout << OCL::geterrorString(e.err()) << std::endl;
        return;
    }
 
    energy = 0;
-   // Global mem accumulate
+   // global mem accumulate
    for (int i = 0; i < n; ++i)// update position
    {
      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
@@ -382,7 +386,7 @@ void GSimulation :: start()
      particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
      particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
 
-//     no need since OCL overwrites
+//     no need since ocl overwrites
 //     particles->acc_x[i] = 0.;
 //     particles->acc_y[i] = 0.;
 //     particles->acc_z[i] = 0.;
@@ -405,7 +409,7 @@ void GSimulation :: start()
     if(!(s%get_sfreq()) ) 
     {
       if (tuning) {
-        printf("CPU/GPU ratio = %f\n", cpu_ratio);
+        printf("cpu/gpu ratio = %f\n", cpu_ratio);
         cpu_ratio += 0.01;
         if (cpu_ratio > 1.0f) cpu_ratio = 1.0f;
       }

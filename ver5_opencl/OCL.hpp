@@ -1,4 +1,6 @@
-#include <CL/cl2.hpp>
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define __CL_ENABLE_EXCEPTIONS
+#include <CL/cl.hpp>
 #include <vector>
 class OCL
 {
@@ -25,7 +27,7 @@ class OCL
                     //}
 
     public:
-         OCL() {
+         OCL(int devices) {
            std::vector<cl::Platform> plats;
            cl::Platform::get(&plats);
            printf("\nFound %d platforms:\n", plats.size());
@@ -38,36 +40,50 @@ class OCL
              //std::string ans;
              //std::cin >> ans;
              //if (ans == std::string("yes"))  {
-             if (true)  {
-               std::vector<cl::Device> devs;
+
+             std::vector<cl::Device> devs;
+             if (devices == 1) plat.getDevices(CL_DEVICE_TYPE_CPU, &devs); // CPU
+             if (devices == 2) plat.getDevices(CL_DEVICE_TYPE_GPU, &devs); // GPU
+             if (devices == 3) plat.getDevices(CL_DEVICE_TYPE_ALL, &devs); // CPU+GPU
+
+             if (devices==0)  { // ask
                plat.getDevices(CL_DEVICE_TYPE_ALL, &devs);
                printf("\n        Found %d devices:\n", devs.size());
                for (auto &dev : devs)  // printout available platforms
-                 std::cout << "        " <<  dev.getInfo<CL_DEVICE_NAME>() << std::endl;
-               std::cout << std::endl;
+                 std::cout << "        " <<  dev.getInfo<CL_DEVICE_NAME>() << std::endl << std::endl;
 
-               for (auto &dev : devs)  {// printout available platforms
+               for (auto &dev : devs)  {// enable or disable individual units
                  std::cout << "        Enable " << dev.getInfo<CL_DEVICE_NAME>() << "? (yes/no)" << std::endl;
                  std::string ans;
                  std::cin >> ans;
-                 if (ans == std::string("yes"))  {
-                   try {
-                       auto context = cl::Context(dev);
-                       auto queue = cl::CommandQueue(context, dev, 0);
-                       compute_unit cmp;
-                       cmp.platform = plat;
-                       cmp.device = dev;
-                       cmp.context = context;
-                       cmp.queue = queue;
-                       compute_units.insert(compute_units.end(), cmp);
-
-                   } catch (cl::Error &e) {
-                       std::cout << getErrorString(e.err()) << std::endl;
-                   }
+                 if (ans == std::string("no"))  { // enable device
+                  // devs.remove(dev);
                  }
                }
              }
+
+             for (auto &dev : devs)  {// printout available platforms
+               try { // make queues
+                   auto context = cl::Context(dev);
+                   auto queue = cl::CommandQueue(context, dev, 0);
+                   compute_unit cmp;
+                   cmp.platform = plat;
+                   cmp.device = dev;
+                   cmp.context = context;
+                   cmp.queue = queue;
+                   compute_units.insert(compute_units.end(), cmp);
+
+               } catch (cl::Error &e) {
+                   std::cout << getErrorString(e.err()) << std::endl;
+               }
+             }
+
+
            }
+        }
+        
+        OCL() {
+          OCL(0);
         }
 
          void* add_kernel_file(std::string fun_file) {
