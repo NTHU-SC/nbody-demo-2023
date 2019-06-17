@@ -130,6 +130,22 @@ void GSimulation :: start()
   double gflops = 1e-9 * ( (11. + 18. ) * nd*nd  +  nd * 19. );
   double av=0.0, dev=0.0;
   int nf = 0;
+
+
+// Currently there's a compiler issue with mapping member fields
+// Until that issue is fixed, the workaround is to capture the fields
+// into local temps and use the temps in the TARGET region
+  float *tmp_particles_pos_x = particles_pos_x;
+  float *tmp_particles_pos_y = particles_pos_y;
+  float *tmp_particles_pos_z = particles_pos_z;
+  float *tmp_particles_vel_x = particles_vel_x;
+  float *tmp_particles_vel_y = particles_vel_y;
+  float *tmp_particles_vel_z = particles_vel_z;
+  float *tmp_particles_acc_x = particles_acc_x;
+  float *tmp_particles_acc_y = particles_acc_y;
+  float *tmp_particles_acc_z = particles_acc_z;
+  float *tmp_particles_mass = particles_mass ;
+  
   
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
@@ -137,44 +153,44 @@ void GSimulation :: start()
    ts0 += time.start(); 
 
 #pragma omp target teams distribute parallel for \
-map(to: particles_pos_x[:n]) \
-map(to: particles_pos_y[:n]) \
-map(to: particles_pos_z[:n]) \
-map(to: particles_vel_x[:n]) \
-map(to: particles_vel_y[:n]) \
-map(to: particles_vel_z[:n]) \
-map(tofrom: particles_acc_x[:n]) \
-map(tofrom: particles_acc_y[:n]) \
-map(tofrom: particles_acc_z[:n]) \
-map(to: particles_mass [:n]) \
+map(to: tmp_particles_pos_x[:n]) \
+map(to: tmp_particles_pos_y[:n]) \
+map(to: tmp_particles_pos_z[:n]) \
+map(to: tmp_particles_vel_x[:n]) \
+map(to: tmp_particles_vel_y[:n]) \
+map(to: tmp_particles_vel_z[:n]) \
+map(tofrom: tmp_particles_acc_x[:n]) \
+map(tofrom: tmp_particles_acc_y[:n]) \
+map(tofrom: tmp_particles_acc_z[:n]) \
+map(to: tmp_particles_mass [:n]) \
    
 {
    for (i = 0; i < n; i++)// update acceleration
    {
-     real_type ax_i = particles_acc_x[i];
-     real_type ay_i = particles_acc_y[i];
-     real_type az_i = particles_acc_z[i];
-//#pragma omp simd reduction(+:ax_i,ay_i,az_i)
+     real_type ax_i = tmp_particles_acc_x[i];
+     real_type ay_i = tmp_particles_acc_y[i];
+     real_type az_i = tmp_particles_acc_z[i];
+#pragma omp simd
      for (j = 0; j < n; j++)
      {
        real_type dx, dy, dz;
        real_type distanceSqr = 0.0f;
        real_type distanceInv = 0.0f;
           
-       dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
-       dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
-       dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
+       dx = tmp_particles_pos_x[j] - tmp_particles_pos_x[i];	//1flop
+       dy = tmp_particles_pos_y[j] - tmp_particles_pos_y[i];	//1flop	
+       dz = tmp_particles_pos_z[j] - tmp_particles_pos_z[i];	//1flop
     
        distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
        distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
-       ax_i+= dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-       ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-       az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+       ax_i += dx * G * tmp_particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+       ay_i += dy * G * tmp_particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+       az_i += dz * G * tmp_particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
      }
-     particles_acc_x[i] = ax_i;
-     particles_acc_y[i] = ay_i;
-     particles_acc_z[i] = az_i;
+     tmp_particles_acc_x[i] = ax_i;
+     tmp_particles_acc_y[i] = ay_i;
+     tmp_particles_acc_z[i] = az_i;
    }
 } //end target
    energy = 0;
