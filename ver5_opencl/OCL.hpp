@@ -14,7 +14,7 @@ class OCL
         cl::CommandQueue queue;
       };
 
-      std::vector<compute_unit> compute_units;
+      std::vector<compute_unit> clcu;
 
     public:
 
@@ -53,7 +53,7 @@ class OCL
                      cmp.device = dev;
                      cmp.context = context;
                      cmp.queue = queue;
-                     compute_units.insert(compute_units.end(), cmp);
+                     clcu.insert(clcu.end(), cmp);
                      std::cout << "Added " << dev.getInfo<CL_DEVICE_NAME>() << std::endl;
 
                }

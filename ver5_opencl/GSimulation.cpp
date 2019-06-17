@@ -202,7 +202,7 @@ void GSimulation :: start()
    }
     )CLC";
 
-    int num_devices = OpenCL.compute_units.size();
+    int num_devices = OpenCL.clcu.size();
 
     /* Set up workgroup sizes
      * very naive implementaiton assuming device[0] is CPU
@@ -245,7 +245,7 @@ void GSimulation :: start()
     size_t* offsets = new size_t(num_devices);
 
     for (int i = 0; i < num_devices; i++) 
-      program[i] = cl::Program(OpenCL.compute_units[i].context, src_str);
+      program[i] = cl::Program(OpenCL.clcu[i].context, src_str);
 
     cl::Kernel kernel[num_devices];
     cl::Buffer particles_pos_x_d[num_devices];
@@ -273,19 +273,19 @@ void GSimulation :: start()
         kernel[i] = cl::Kernel(program[i], "comp"); 
         
         // Make buffer
-        particles_pos_x_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
-        particles_pos_y_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
-        particles_pos_z_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
+        particles_pos_x_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
+        particles_pos_y_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
+        particles_pos_z_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
 
-        particles_vel_x_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
-        particles_vel_y_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
-        particles_vel_z_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
+        particles_vel_x_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
+        particles_vel_y_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
+        particles_vel_z_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
 
-        particles_acc_x_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
-        particles_acc_y_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
-        particles_acc_z_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
+        particles_acc_x_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
+        particles_acc_y_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
+        particles_acc_z_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
 
-        particles_mass_d[i] = cl::Buffer(OpenCL.compute_units[i].context, CL_MEM_WRITE_ONLY , sizeof(real_type)*n, NULL);
+        particles_mass_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_WRITE_ONLY , sizeof(real_type)*n, NULL);
 
 
         kernel[i].setArg(0, particles_pos_x_d[i]);
@@ -310,7 +310,7 @@ void GSimulation :: start()
         printf("failed to setup the ocl kernel\n");
         // Print build info for all devices
         cl_int buildErr;
-        auto buildInfo = program[i].getBuildInfo<CL_PROGRAM_BUILD_LOG>(OpenCL.compute_units[i].device);
+        auto buildInfo = program[i].getBuildInfo<CL_PROGRAM_BUILD_LOG>(OpenCL.clcu[i].device);
 //        for (auto &pair : buildInfo) {
 //            std::cerr << pair.second << std::endl << std::endl;
 //        }
@@ -322,7 +322,7 @@ void GSimulation :: start()
 
 
   for (int i = 0; i < num_devices; i++)
-    OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_mass_d[i],  CL_TRUE, 0, n*sizeof(real_type), particles->mass);
+    OpenCL.clcu[i].queue.enqueueWriteBuffer(particles_mass_d[i],  CL_TRUE, 0, n*sizeof(real_type), particles->mass);
 
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
@@ -348,23 +348,23 @@ void GSimulation :: start()
        int shr_m = shares[i] * sizeof(real_type);
 
        //the nature of the kernel requires the full write
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_x_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_x);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_y_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_y);
-       OpenCL.compute_units[i].queue.enqueueWriteBuffer(particles_pos_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_z);
-       OpenCL.compute_units[i].queue.finish(); // need this because using non-blocking writes
+       OpenCL.clcu[i].queue.enqueueWriteBuffer(particles_pos_x_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_x);
+       OpenCL.clcu[i].queue.enqueueWriteBuffer(particles_pos_y_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_y);
+       OpenCL.clcu[i].queue.enqueueWriteBuffer(particles_pos_z_d[i], CL_FALSE, 0, n*sizeof(real_type), particles->pos_z);
+       OpenCL.clcu[i].queue.finish(); // need this because using non-blocking writes
 
-       OpenCL.compute_units[i].queue.enqueueNDRangeKernel(kernel[i], cl::NDRange(off), cl::NDRange(shr), local[i]);
+       OpenCL.clcu[i].queue.enqueueNDRangeKernel(kernel[i], cl::NDRange(off), cl::NDRange(shr), local[i]);
 
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_x_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_x));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_y_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_y));
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_acc_z_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_z));
+       OpenCL.clcu[i].queue.enqueueReadBuffer(particles_acc_x_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_x));
+       OpenCL.clcu[i].queue.enqueueReadBuffer(particles_acc_y_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_y));
+       OpenCL.clcu[i].queue.enqueueReadBuffer(particles_acc_z_d[i], CL_FALSE, off_m, shr_m, off+(particles->acc_z));
 
-       OpenCL.compute_units[i].queue.enqueueReadBuffer(particles_mass_d[i],  CL_FALSE, off_m, shr_m, off+(particles->mass));
+       OpenCL.clcu[i].queue.enqueueReadBuffer(particles_mass_d[i],  CL_FALSE, off_m, shr_m, off+(particles->mass));
      }
 
      // flush devices
      for (int i = 0; i < num_devices; i++)  
-       OpenCL.compute_units[i].queue.finish(); // need this because using non-blocking reads
+       OpenCL.clcu[i].queue.finish(); // need this because using non-blocking reads
 
    } catch (cl::Error &e) {
        // print build info for all devices
