@@ -16,17 +16,8 @@ class OCL
 
       std::vector<compute_unit> compute_units;
 
-//                if (platforms.size() == 0) {
-//                    std::cout << "no OpenCL platforms found/selected!!!" << std::endl << std::endl;
-//                    return; 
-//                }
-
-                    //if (devices.size() == 0) {
-                    //    std::cout << "no OpenCL devices found!!!" << std::endl << std::endl;
-                    //    return;
-                    //}
-
     public:
+
          OCL(int devices) {
            std::vector<cl::Platform> plats;
            cl::Platform::get(&plats);
@@ -35,52 +26,44 @@ class OCL
              std::cout <<  plat.getInfo<CL_PLATFORM_NAME>() << std::endl;
            std::cout << std::endl;
 
+           std::vector<cl::Device> devs;
+           std::vector<cl::Device> devs_enable;
            for (auto &plat : plats)  {// printout available platforms
-             //std::cout << "  Enable " << plat.getInfo<CL_PLATFORM_NAME>() << "? (yes/no)" << std::endl;
-             //std::string ans;
-             //std::cin >> ans;
-             //if (ans == std::string("yes"))  {
-
-             std::vector<cl::Device> devs;
-             if (devices == 1) plat.getDevices(CL_DEVICE_TYPE_CPU, &devs); // CPU
-             if (devices == 2) plat.getDevices(CL_DEVICE_TYPE_GPU, &devs); // GPU
-             if (devices == 3) plat.getDevices(CL_DEVICE_TYPE_ALL, &devs); // CPU+GPU
-
-             if (devices==0)  { // ask
                plat.getDevices(CL_DEVICE_TYPE_ALL, &devs);
-               printf("\n        Found %d devices:\n", devs.size());
-               for (auto &dev : devs)  // printout available platforms
-                 std::cout << "        " <<  dev.getInfo<CL_DEVICE_NAME>() << std::endl << std::endl;
-
-               for (auto &dev : devs)  {// enable or disable individual units
-                 std::cout << "        Enable " << dev.getInfo<CL_DEVICE_NAME>() << "? (yes/no)" << std::endl;
-                 std::string ans;
-                 std::cin >> ans;
-                 if (ans == std::string("no"))  { // enable device
-                  // devs.remove(dev);
+               for (auto &dev : devs) {  // printout available platforms
+                 bool enable = false;
+                 if (devices==0) {
+                   std::cout << "        Enable " << dev.getInfo<CL_DEVICE_NAME>() << "? (y/n)" << std::endl;
+                   std::string ans;
+                   std::cin >> ans;
+                   enable = !ans.compare("y");
                  }
+                 if( dev.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU && (enable || devices==1 || devices==3) ) devs_enable.push_back(dev);
+                 if( dev.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU && (enable || devices==2 || devices==3) ) devs_enable.push_back(dev);
                }
-             }
+           }
+               
 
-             for (auto &dev : devs)  {// printout available platforms
-               try { // make queues
-                   auto context = cl::Context(dev);
-                   auto queue = cl::CommandQueue(context, dev, 0);
-                   compute_unit cmp;
-                   cmp.platform = plat;
-                   cmp.device = dev;
-                   cmp.context = context;
-                   cmp.queue = queue;
-                   compute_units.insert(compute_units.end(), cmp);
+             try {
+               for (auto &dev : devs_enable)  {// printout available platforms
+                     auto context = cl::Context(dev);
+                     auto queue = cl::CommandQueue(context, dev, 0);
+                     compute_unit cmp;
+//                     cmp.platform = plat;
+                     cmp.device = dev;
+                     cmp.context = context;
+                     cmp.queue = queue;
+                     compute_units.insert(compute_units.end(), cmp);
+                     std::cout << "Added " << dev.getInfo<CL_DEVICE_NAME>() << std::endl;
 
-               } catch (cl::Error &e) {
-                   std::cout << getErrorString(e.err()) << std::endl;
                }
+             } catch (cl::Error &e) {
+                 std::cout << "Failed to create queue" << std::endl;
+                 std::cout << getErrorString(e.err()) << std::endl;
              }
 
 
            }
-        }
         
         OCL() {
           OCL(0);
@@ -89,6 +72,7 @@ class OCL
          void* add_kernel_file(std::string fun_file) {
              return NULL;
          }
+
          void* add_kernel_string(std::string kernel_src) {
              return NULL;
          }
