@@ -187,8 +187,7 @@ void GSimulation :: start()
 	   dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
 	
  	   distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	   //distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
- 	   distanceInv = 1.2f;
+	   distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
 	   ax_i+= dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
 	   ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
@@ -339,7 +338,7 @@ void GSimulation :: start()
 
 
 // set to 0 for fallback to original CPU implementaiton
-#if 0
+#if 1
    try {
      for (int i = 0; i < num_devices; i++) {
        int off = offsets[i];
@@ -370,7 +369,7 @@ void GSimulation :: start()
        // print build info for all devices
 
        std::cout << "failed to launch kernel" << std::endl;
-       std::cout << OCL::geterrorString(e.err()) << std::endl;
+       std::cout << OCL::getErrorString(e.err()) << std::endl;
        return;
    }
 
