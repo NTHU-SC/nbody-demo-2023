@@ -1,6 +1,9 @@
-ver5_opencl
-ver5_sycl/profiles
 ver5/profiles
-ver5_clangykt
-ver5_omp
 
+ver5_opencl/profiles
+ver5_sycl/profiles
+ver5_omp/profiles
+
+*.o
+*.x
+*.optrpt
