@@ -156,7 +156,6 @@ void GSimulation :: start()
 
    ts0 += time.start(); 
    {
-
      auto particles_pos_x_d = buffer<real_type, 1>(particles->pos_x, range<1>(n));
      auto particles_pos_y_d = buffer<real_type, 1>(particles->pos_y, range<1>(n));
      auto particles_pos_z_d = buffer<real_type, 1>(particles->pos_z, range<1>(n));
@@ -170,9 +169,6 @@ void GSimulation :: start()
      auto particles_acc_z_d = buffer<real_type, 1>(particles->acc_z, range<1>(n));
 
      auto particles_mass_d  = buffer<real_type, 1>(particles->mass, range<1>(n));
-
-
-
 
     q.submit([&] (handler& cgh)  {
        auto particles_acc_x = particles_acc_x_d.get_access<access::mode::read_write>(cgh);
@@ -191,8 +187,10 @@ void GSimulation :: start()
 
 
        cgh.parallel_for<class update_accel>(
-         range<1>(range<1>(n)), id<1>(), [=](item<1> item) {
-           auto i = item.get_id();
+         nd_range<1>(range<1>(n), range<1>()), [=](nd_item<1> item) {
+           auto i = item.get_global_id();
+//         range<1>(range<1>(n)), id<1>(), [=](item<1> item) {
+//           auto i = item.get_id();
 
      real_type ax_i = particles_acc_x[i];
      real_type ay_i = particles_acc_y[i];
@@ -237,7 +235,7 @@ void GSimulation :: start()
 
 
        cgh.parallel_for<class update_energy>(
-         range<1>(range<1>(n)), id<1>(), [=](item<1> item) {
+         range<1>(range<1>(n)), [=](item<1> item) {
            auto i = item.get_id();
 
      particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
