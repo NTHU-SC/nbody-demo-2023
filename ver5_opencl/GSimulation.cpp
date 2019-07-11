@@ -152,19 +152,19 @@ void GSimulation :: start()
   std::string src_str = R"CLC(
    #include <types.hpp>
    __kernel void comp(
-       __global real_type* particles_pos_x, 
-       __global real_type* particles_pos_y, 
-       __global real_type* particles_pos_z, 
+       __global real_type* restrict particles_pos_x, 
+       __global real_type* restrict particles_pos_y, 
+       __global real_type* restrict particles_pos_z, 
 
-       __global real_type* particles_vel_x, 
-       __global real_type* particles_vel_y, 
-       __global real_type* particles_vel_z, 
+       __global real_type* restrict particles_vel_x, 
+       __global real_type* restrict particles_vel_y, 
+       __global real_type* restrict particles_vel_z, 
 
-       __global real_type* particles_acc_x, 
-       __global real_type* particles_acc_y, 
-       __global real_type* particles_acc_z, 
+       __global real_type* restrict particles_acc_x, 
+       __global real_type* restrict particles_acc_y, 
+       __global real_type* restrict particles_acc_z, 
 
-       __global real_type* particles_mass, 
+       __global real_type* restrict particles_mass, 
 
        real_type dt,
        int n
