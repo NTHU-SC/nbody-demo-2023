@@ -1,6 +1,7 @@
+#export MODULEPATH=$MODULEPATH:/home/pvelesko/local/modulefiles
 module purge
 source /soft/compilers/intel-2019/parallel_studio_xe_2019/psxevars.sh
-module load opencl/neo
+module load opencl
 cd ver5_opencl; make clean; make; 
 PERF_OCL=`./nbody.x 20000 150 gpu | tail -n 2 | head -n 1 | awk '{print $5}'`
 cd ..
