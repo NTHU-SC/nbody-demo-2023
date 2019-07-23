@@ -111,9 +111,9 @@ void GSimulation :: start()
   queue q_cpu; // = queue(cpu_selector{});
   for (auto &plat : platforms) {
     for (auto &dev : plat.get_devices(info::device_type::cpu))
-      q = queue(dev);
+      q_cpu = queue(dev);
   }
-  std::cout << q.get_device().get_info<info::device::name>() << std::endl;
+  std::cout << q_cpu.get_device().get_info<info::device::name>() << std::endl;
 
   std::vector<queue> qs;
   qs.push_back(q_cpu);
@@ -182,43 +182,150 @@ void GSimulation :: start()
 
      auto particles_mass_d  = buffer<real_type, 1>(particles->mass, range<1>(n));
 
-     //subbuffer1
-     auto particles_pos_x_d1 = buffer<real_type, 1>(particles_pos_x_d,id<1>(0), range<1>(n));
-     auto particles_pos_y_d1 = buffer<real_type, 1>(particles_pos_y_d,id<1>(0), range<1>(n));
-     auto particles_pos_z_d1 = buffer<real_type, 1>(particles_pos_z_d,id<1>(0), range<1>(n));
-
-     auto particles_vel_x_d1 = buffer<real_type, 1>(particles_vel_x_d,id<1>(0), range<1>(n));
-     auto particles_vel_y_d1 = buffer<real_type, 1>(particles_vel_y_d,id<1>(0), range<1>(n));
-     auto particles_vel_z_d1 = buffer<real_type, 1>(particles_vel_z_d,id<1>(0), range<1>(n));
-
-     auto particles_acc_x_d1 = buffer<real_type, 1>(particles_acc_x_d,id<1>(0), range<1>(n));
-     auto particles_acc_y_d1 = buffer<real_type, 1>(particles_acc_y_d,id<1>(0), range<1>(n));
-     auto particles_acc_z_d1 = buffer<real_type, 1>(particles_acc_z_d,id<1>(0), range<1>(n));
-
-     auto particles_mass_d1 =  buffer<real_type, 1>(particles_mass_d, id<1>(0), range<1>(n));
+     auto particles_pos_x_d1 = buffer<real_type, 1>(particles_pos_x_d,id<1>(0), range<1>(1000));
+     auto particles_pos_y_d1 = buffer<real_type, 1>(particles_pos_y_d,id<1>(0), range<1>(1000));
+     auto particles_pos_z_d1 = buffer<real_type, 1>(particles_pos_z_d,id<1>(0), range<1>(1000));
+     auto particles_pos_x_d2 = buffer<real_type, 1>(particles_pos_x_d,id<1>(1000), range<1>(1000));
+     auto particles_pos_y_d2 = buffer<real_type, 1>(particles_pos_y_d,id<1>(1000), range<1>(1000));
+     auto particles_pos_z_d2 = buffer<real_type, 1>(particles_pos_z_d,id<1>(1000), range<1>(1000));
 
 
     q.submit([&] (handler& cgh)  {
+     auto particles_acc_x_d1 = buffer<real_type, 1>(particles_acc_x_d,id<1>(0), range<1>(1000));
+     auto particles_acc_y_d1 = buffer<real_type, 1>(particles_acc_y_d,id<1>(0), range<1>(1000));
+     auto particles_acc_z_d1 = buffer<real_type, 1>(particles_acc_z_d,id<1>(0), range<1>(1000));
+
        auto particles_acc_x = particles_acc_x_d1.get_access<access::mode::read_write>(cgh);
        auto particles_acc_y = particles_acc_y_d1.get_access<access::mode::read_write>(cgh);
        auto particles_acc_z = particles_acc_z_d1.get_access<access::mode::read_write>(cgh);
 
-       auto particles_vel_x = particles_vel_x_d1.get_access<access::mode::read>(cgh);
-       auto particles_vel_y = particles_vel_y_d1.get_access<access::mode::read>(cgh);
-       auto particles_vel_z = particles_vel_z_d1.get_access<access::mode::read>(cgh);
+       auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read>(cgh);
+       auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read>(cgh);
+       auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read>(cgh);
 
-       auto particles_pos_x = particles_pos_x_d1.get_access<access::mode::read>(cgh);
-       auto particles_pos_y = particles_pos_y_d1.get_access<access::mode::read>(cgh);
-       auto particles_pos_z = particles_pos_z_d1.get_access<access::mode::read>(cgh);
+       auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read>(cgh);
+       auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read>(cgh);
+       auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read>(cgh);
+       auto particles_pos_x_off = particles_pos_x_d1.get_access<access::mode::read>(cgh);
+       auto particles_pos_y_off = particles_pos_y_d1.get_access<access::mode::read>(cgh);
+       auto particles_pos_z_off = particles_pos_z_d1.get_access<access::mode::read>(cgh);
 
-       auto particles_mass = particles_mass_d1.get_access<access::mode::read>(cgh);
+
+       auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
 
 
        cgh.parallel_for<class update_accel>(
-         nd_range<1>(range<1>(n), range<1>()), [=](nd_item<1> item) {
+         range<1>(1000),  [=](id<1> i) {
+         //nd_range<1>(range<1>(1000), range<1>()), [=](nd_item<1> item) {
+         //  auto i = item.get_global_id();
+
+     real_type ax_i = particles_acc_x[i];
+     real_type ay_i = particles_acc_y[i];
+     real_type az_i = particles_acc_z[i];
+
+     for (int j = 0; j < n; j++)
+     {
+       real_type dx, dy, dz;
+	     real_type distanceSqr = 0.0f;
+	     real_type distanceInv = 0.0f;
+	        
+	     dx = particles_pos_x[j] - particles_pos_x_off[i];	//1flop
+	     dy = particles_pos_y[j] - particles_pos_y_off[i];	//1flop	
+	     dz = particles_pos_z[j] - particles_pos_z_off[i];	//1flop
+	
+ 	     distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+ 	     distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+
+	     ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	     ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	     az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+     }
+     particles_acc_x[i] = ax_i;
+     particles_acc_y[i] = ay_i;
+     particles_acc_z[i] = az_i;
+
+         }); // end of parallel for scope
+       }); // end of command group scope
+
+//update host
+
+   
+
+    q.submit([&] (handler& cgh)  {
+     auto particles_acc_x_d2 = buffer<real_type, 1>(particles_acc_x_d,id<1>(1000), range<1>(1000));
+     auto particles_acc_y_d2 = buffer<real_type, 1>(particles_acc_y_d,id<1>(1000), range<1>(1000));
+     auto particles_acc_z_d2 = buffer<real_type, 1>(particles_acc_z_d,id<1>(1000), range<1>(1000));
+       auto particles_acc_x = particles_acc_x_d2.get_access<access::mode::read_write>(cgh);
+       auto particles_acc_y = particles_acc_y_d2.get_access<access::mode::read_write>(cgh);
+       auto particles_acc_z = particles_acc_z_d2.get_access<access::mode::read_write>(cgh);
+
+       auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read>(cgh);
+       auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read>(cgh);
+       auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read>(cgh);
+
+       auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read>(cgh);
+       auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read>(cgh);
+       auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read>(cgh);
+       auto particles_pos_x_off = particles_pos_x_d2.get_access<access::mode::read>(cgh);
+       auto particles_pos_y_off = particles_pos_y_d2.get_access<access::mode::read>(cgh);
+       auto particles_pos_z_off = particles_pos_z_d2.get_access<access::mode::read>(cgh);
+
+       auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
+
+
+       cgh.parallel_for<class update_acce2l>(
+         range<1>(1000),  [=](id<1> i) {
+//         nd_range<1>(range<1>(1000), range<1>()), [=](nd_item<1> item) {
+//           auto i = item.get_global_id();
+
+     real_type ax_i = particles_acc_x[i];
+     real_type ay_i = particles_acc_y[i];
+     real_type az_i = particles_acc_z[i];
+
+     for (int j = 0; j < n; j++)
+     {
+       real_type dx, dy, dz;
+	     real_type distanceSqr = 0.0f;
+	     real_type distanceInv = 0.0f;
+	        
+	     dx = particles_pos_x[j] - particles_pos_x_off[i];	//1flop
+	     dy = particles_pos_y[j] - particles_pos_y_off[i];	//1flop	
+	     dz = particles_pos_z[j] - particles_pos_z_off[i];	//1flop
+	
+ 	     distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+ 	     distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+
+	     ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	     ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	     az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+     }
+     particles_acc_x[i] = ax_i;
+     particles_acc_y[i] = ay_i;
+     particles_acc_z[i] = az_i;
+
+         }); // end of parallel for scope
+       }); // end of command group scope
+
+#if 0
+    q_cpu.submit([&] (handler& cgh)  {
+       auto particles_acc_x = particles_acc_x_d2.get_access<access::mode::read_write>(cgh);
+       auto particles_acc_y = particles_acc_y_d2.get_access<access::mode::read_write>(cgh);
+       auto particles_acc_z = particles_acc_z_d2.get_access<access::mode::read_write>(cgh);
+
+       auto particles_vel_x = particles_vel_x_d2.get_access<access::mode::read>(cgh);
+       auto particles_vel_y = particles_vel_y_d2.get_access<access::mode::read>(cgh);
+       auto particles_vel_z = particles_vel_z_d2.get_access<access::mode::read>(cgh);
+
+       auto particles_pos_x = particles_pos_x_d2.get_access<access::mode::read>(cgh);
+       auto particles_pos_y = particles_pos_y_d2.get_access<access::mode::read>(cgh);
+       auto particles_pos_z = particles_pos_z_d2.get_access<access::mode::read>(cgh);
+
+       auto particles_mass = particles_mass_d2.get_access<access::mode::read>(cgh);
+
+
+       cgh.parallel_for<class update_accel2>(
+         nd_range<1>(range<1>(1000), range<1>()), [=](nd_item<1> item) {
            auto i = item.get_global_id();
-//         range<1>(range<1>(n)), id<1>(), [=](item<1> item) {
-//           auto i = item.get_id();
 
      real_type ax_i = particles_acc_x[i];
      real_type ay_i = particles_acc_y[i];
@@ -247,7 +354,8 @@ void GSimulation :: start()
 
          }); // end of parallel for scope
        }); // end of command group scope
-
+#endif
+#if 0
     q.submit([&] (handler& cgh)  {
        auto particles_acc_x = particles_acc_x_d1.get_access<access::mode::write>(cgh);
        auto particles_acc_y = particles_acc_y_d1.get_access<access::mode::write>(cgh);
@@ -280,12 +388,27 @@ void GSimulation :: start()
          particles_acc_z[i] = 0.;
          });
        }); 
+#endif
    } // end of buffer scope
 
    // no device side reductions so have to do it here
    energy = 0;
    for (int i = 0; i < n; ++i)// update position
    {
+
+     particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
+     particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
+     particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
+	  
+     particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
+     particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
+     particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
+
+
+         particles->acc_x[i] = 0.;
+         particles->acc_y[i] = 0.;
+         particles->acc_z[i] = 0.;
+
      energy += particles->mass[i] * (
 	       particles->vel_x[i]*particles->vel_x[i] + 
                particles->vel_y[i]*particles->vel_y[i] +
