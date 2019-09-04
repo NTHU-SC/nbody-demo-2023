@@ -18,6 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define dump(X, xx_len) for (int xx = 0; xx < xx_len; xx++) std::cout << X[xx] << " "; std::cout << std::endl;
 #include "GSimulation.hpp"
 #include "cpu_time.hpp"
 #include "mpi.h"
@@ -112,6 +113,7 @@ void GSimulation :: start()
   } else {
     world_n = n / world_size;
   }
+  int max_world_n = n / world_size + n % world_size;
   std::cout << "Rank: " << world_rank << " Share: " << world_n << std::endl;
   int i,j;
  
@@ -133,6 +135,9 @@ void GSimulation :: start()
   init_vel();
   init_acc();
   init_mass();
+  MPI_Bcast(particles->mass, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
+
   
   if (world_rank == 0) 
     print_header();
@@ -153,10 +158,27 @@ void GSimulation :: start()
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   {   
-   // TODO: 
    // update all ranks with latest data from master
+   MPI_Bcast(particles->vel_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->vel_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->vel_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+   MPI_Bcast(particles->pos_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->pos_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->pos_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+   MPI_Bcast(particles->acc_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->acc_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->acc_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+   MPI_Barrier(MPI_COMM_WORLD);
    ts0 += time.start(); 
-   for (i = 0; i < world_n; i++)// update acceleration
+
+   int start, end;
+   start = world_rank * world_n;
+   end = start + world_n;
+
+   for (i = start; i < end; i++)// update acceleration
    {
 #ifdef ASALIGN
      __assume_aligned(particles->pos_x, alignment);
@@ -192,9 +214,8 @@ void GSimulation :: start()
      particles->acc_y[i] = ay_i;
      particles->acc_z[i] = az_i;
    }
-   energy = 0;
 
-   for (i = 0; i < n; ++i)// update position
+   for (i = start; i < end; ++i)// update position
    {
      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
      particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
@@ -207,7 +228,66 @@ void GSimulation :: start()
      particles->acc_x[i] = 0.;
      particles->acc_y[i] = 0.;
      particles->acc_z[i] = 0.;
-	
+   }
+
+   // send new to master
+   if (world_rank != 0) {
+     // make a payload
+     float send_buf[max_world_n * 9 + 2]; // 3 * 3 + sender
+       send_buf[0] = float(world_rank);
+       send_buf[1] = float(world_n);
+
+       int idx = int(send_buf[0] * send_buf[1]);
+     for (int ii = 0; ii < world_n; ii++) {
+       send_buf[2 + ii + 0*0*max_world_n] = particles->vel_x[ii + idx];
+       send_buf[2 + ii + 0*1*max_world_n] = particles->vel_y[ii + idx];
+       send_buf[2 + ii + 0*2*max_world_n] = particles->vel_z[ii + idx];
+
+       send_buf[2 + ii + 1*0*max_world_n] = particles->pos_x[ii + idx];
+       send_buf[2 + ii + 1*1*max_world_n] = particles->pos_y[ii + idx];
+       send_buf[2 + ii + 1*2*max_world_n] = particles->pos_z[ii + idx];
+
+       send_buf[2 + ii + 2*0*max_world_n] = particles->acc_x[ii + idx];
+       send_buf[2 + ii + 2*1*max_world_n] = particles->acc_y[ii + idx];
+       send_buf[2 + ii + 2*2*max_world_n] = particles->acc_z[ii + idx];
+     }
+     //dump(send_buf, 10)
+     MPI_Send(send_buf, max_world_n * 9 + 2, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+ } else {
+     MPI_Status status;
+     float buf[max_world_n * 9 + 2]; // buffer for MPI recv
+     int sender = 0;
+
+     MPI_Recv(buf, max_world_n * 9 + 2, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+     //dump(buf, 10)
+     int sender_rank = int(buf[0]);
+     int sender_size = int(buf[1]);
+     int idx = int(buf[1]) * int(buf[0]);
+//     std::cout << "Received message from: " << sender_rank << std::endl;
+//     std::cout << "Elements received: " << sender_size << std::endl;
+     
+     for (int ii = 0; ii < sender_size; ii++) {
+       particles->vel_x[ii + idx] = buf[2 + ii + 0*0*max_world_n];
+       particles->vel_y[ii + idx] = buf[2 + ii + 0*1*max_world_n];
+       particles->vel_z[ii + idx] = buf[2 + ii + 0*2*max_world_n];
+
+       particles->pos_x[ii + idx] = buf[2 + ii + 1*0*max_world_n];
+       particles->pos_y[ii + idx] = buf[2 + ii + 1*1*max_world_n];
+       particles->pos_z[ii + idx] = buf[2 + ii + 1*2*max_world_n];
+
+       particles->acc_x[ii + idx] = buf[2 + ii + 2*0*max_world_n];
+       particles->acc_y[ii + idx] = buf[2 + ii + 2*1*max_world_n];
+       particles->acc_z[ii + idx] = buf[2 + ii + 2*2*max_world_n];
+     }
+
+
+   }
+
+   // print energy
+  if (world_rank == 0) {
+   energy = 0;
+   for (i = 0; i < n; ++i)// update position
+   {
      energy += particles->mass[i] * (
 	       particles->vel_x[i]*particles->vel_x[i] + 
                particles->vel_y[i]*particles->vel_y[i] +
@@ -217,7 +297,6 @@ void GSimulation :: start()
     _kenergy = 0.5 * energy; 
     
     ts1 += time.stop();
-    if (world_rank == 0)
       if(!(s%get_sfreq()) ) 
       {
         nf += 1;      
@@ -237,6 +316,7 @@ void GSimulation :: start()
         ts0 = 0;
         ts1 = 0;
       }
+  }
   
   } //end of the time step loop
   
