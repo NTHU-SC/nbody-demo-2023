@@ -178,6 +178,8 @@ void GSimulation :: start()
    start = world_rank * world_n;
    end = start + world_n;
 
+//   std::cout << "Rank#" << world_rank<< " start:" << start << " end:" <<end << std::endl;
+
    for (i = start; i < end; i++)// update acceleration
    {
 #ifdef ASALIGN
@@ -215,7 +217,49 @@ void GSimulation :: start()
      particles->acc_z[i] = az_i;
    }
 
-   for (i = start; i < end; ++i)// update position
+   // send new to master
+   int msg_len = max_world_n * 3 + 2;
+   if (world_rank != 0) {
+     // make a payload
+     float send_buf[msg_len]; // 3 * 3 + sender
+       send_buf[0] = float(world_rank);
+       send_buf[1] = float(world_n);
+
+       int idx = int(send_buf[0] * send_buf[1]);
+     for (int ii = 0; ii < world_n; ii++) {
+       send_buf[2 + ii + 0*max_world_n] = particles->acc_x[ii + idx];
+       send_buf[2 + ii + 1*max_world_n] = particles->acc_y[ii + idx];
+       send_buf[2 + ii + 2*max_world_n] = particles->acc_z[ii + idx];
+     }
+     //dump(send_buf, 10)
+     MPI_Send(send_buf, msg_len, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+ } else {
+     MPI_Status status;
+     float buf[msg_len]; // buffer for MPI recv
+     int sender = 0;
+
+     MPI_Recv(buf, msg_len, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+     //dump(buf, 10)
+     int sender_rank = int(buf[0]);
+     int sender_size = int(buf[1]);
+     int idx = int(buf[1]) * int(buf[0]);
+//     std::cout << "Received message from: " << sender_rank << std::endl;
+//     std::cout << "Elements received: " << sender_size << std::endl;
+     
+     for (int ii = 0; ii < sender_size; ii++) {
+       particles->acc_x[ii + idx] = buf[2 + ii + 0*max_world_n];
+       particles->acc_y[ii + idx] = buf[2 + ii + 1*max_world_n];
+       particles->acc_z[ii + idx] = buf[2 + ii + 2*max_world_n];
+     }
+
+
+   } //end comm
+
+   // print energy
+  if (world_rank == 0) {
+   energy = 0;
+
+   for (i = 0; i < n; ++i)// update position
    {
      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
      particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
@@ -228,64 +272,14 @@ void GSimulation :: start()
      particles->acc_x[i] = 0.;
      particles->acc_y[i] = 0.;
      particles->acc_z[i] = 0.;
+	
+     energy += particles->mass[i] * (
+	       particles->vel_x[i]*particles->vel_x[i] + 
+               particles->vel_y[i]*particles->vel_y[i] +
+               particles->vel_z[i]*particles->vel_z[i]); //7flops
    }
-
-   // send new to master
-   if (world_rank != 0) {
-     // make a payload
-     float send_buf[max_world_n * 9 + 2]; // 3 * 3 + sender
-       send_buf[0] = float(world_rank);
-       send_buf[1] = float(world_n);
-
-       int idx = int(send_buf[0] * send_buf[1]);
-     for (int ii = 0; ii < world_n; ii++) {
-       send_buf[2 + ii + 0*0*max_world_n] = particles->vel_x[ii + idx];
-       send_buf[2 + ii + 0*1*max_world_n] = particles->vel_y[ii + idx];
-       send_buf[2 + ii + 0*2*max_world_n] = particles->vel_z[ii + idx];
-
-       send_buf[2 + ii + 1*0*max_world_n] = particles->pos_x[ii + idx];
-       send_buf[2 + ii + 1*1*max_world_n] = particles->pos_y[ii + idx];
-       send_buf[2 + ii + 1*2*max_world_n] = particles->pos_z[ii + idx];
-
-       send_buf[2 + ii + 2*0*max_world_n] = particles->acc_x[ii + idx];
-       send_buf[2 + ii + 2*1*max_world_n] = particles->acc_y[ii + idx];
-       send_buf[2 + ii + 2*2*max_world_n] = particles->acc_z[ii + idx];
-     }
-     //dump(send_buf, 10)
-     MPI_Send(send_buf, max_world_n * 9 + 2, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
- } else {
-     MPI_Status status;
-     float buf[max_world_n * 9 + 2]; // buffer for MPI recv
-     int sender = 0;
-
-     MPI_Recv(buf, max_world_n * 9 + 2, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-     //dump(buf, 10)
-     int sender_rank = int(buf[0]);
-     int sender_size = int(buf[1]);
-     int idx = int(buf[1]) * int(buf[0]);
-//     std::cout << "Received message from: " << sender_rank << std::endl;
-//     std::cout << "Elements received: " << sender_size << std::endl;
-     
-     for (int ii = 0; ii < sender_size; ii++) {
-       particles->vel_x[ii + idx] = buf[2 + ii + 0*0*max_world_n];
-       particles->vel_y[ii + idx] = buf[2 + ii + 0*1*max_world_n];
-       particles->vel_z[ii + idx] = buf[2 + ii + 0*2*max_world_n];
-
-       particles->pos_x[ii + idx] = buf[2 + ii + 1*0*max_world_n];
-       particles->pos_y[ii + idx] = buf[2 + ii + 1*1*max_world_n];
-       particles->pos_z[ii + idx] = buf[2 + ii + 1*2*max_world_n];
-
-       particles->acc_x[ii + idx] = buf[2 + ii + 2*0*max_world_n];
-       particles->acc_y[ii + idx] = buf[2 + ii + 2*1*max_world_n];
-       particles->acc_z[ii + idx] = buf[2 + ii + 2*2*max_world_n];
-     }
-
-
-   }
-
-   // print energy
-  if (world_rank == 0) {
-   energy = 0;
+  
+    _kenergy = 0.5 * energy; 
    for (i = 0; i < n; ++i)// update position
    {
      energy += particles->mass[i] * (
