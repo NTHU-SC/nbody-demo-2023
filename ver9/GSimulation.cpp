@@ -128,7 +128,8 @@ void GSimulation :: start()
   init_acc();
   init_mass();
   
-  print_header();
+  if (world_rank == 0)
+    print_header();
   
   _totTime = 0.; 
   
@@ -260,11 +261,13 @@ void GSimulation :: start()
   #pragma omp parallel
   nthreads=omp_get_num_threads();
   
-  std::cout << std::endl;
-  std::cout << "# Number Threads     : " << nthreads << std::endl;	   
-  std::cout << "# Total Time (s)     : " << _totTime << std::endl;
-  std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
-  std::cout << "===============================" << std::endl;
+  if (world_rank == 0) {
+    std::cout << std::endl;
+    std::cout << "# Number Threads     : " << nthreads << std::endl;	   
+    std::cout << "# Total Time (s)     : " << _totTime << std::endl;
+    std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
+    std::cout << "===============================" << std::endl;
+  }
 
   MPI_Finalize();
 }
