@@ -24,8 +24,8 @@
 
 GSimulation :: GSimulation()
 {
-  std::cout << "===============================" << std::endl;
-  std::cout << " Initialize Gravity Simulation" << std::endl;
+  //std::cout << "===============================" << std::endl;
+  //std::cout << " Initialize Gravity Simulation" << std::endl;
   set_npart(2000); 
   set_nsteps(500);
   set_tstep(0.1); 
@@ -96,6 +96,7 @@ void GSimulation :: init_mass()
 void GSimulation :: start() 
 {
 
+  MPI_Init(NULL, NULL);
   int world_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
   int world_size;
@@ -104,6 +105,14 @@ void GSimulation :: start()
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
+  int world_n;
+  // get share n
+  if (world_rank == 0) {
+    world_n = n / world_size + n % world_size;
+  } else {
+    world_n = n / world_size;
+  }
+  std::cout << "Rank: " << world_rank << " Share: " << world_n << std::endl;
   int i,j;
  
   const int alignment = 32;
@@ -147,7 +156,7 @@ void GSimulation :: start()
    // TODO: 
    // update all ranks with latest data from master
    ts0 += time.start(); 
-   for (i = 0; i < n; i++)// update acceleration
+   for (i = 0; i < world_n; i++)// update acceleration
    {
 #ifdef ASALIGN
      __assume_aligned(particles->pos_x, alignment);
@@ -247,6 +256,8 @@ void GSimulation :: start()
     std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
     std::cout << "===============================" << std::endl;
   }
+
+  MPI_Finalize();
 
 }
 
