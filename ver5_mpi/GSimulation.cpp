@@ -95,6 +95,12 @@ void GSimulation :: init_mass()
 
 void GSimulation :: start() 
 {
+
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
@@ -119,7 +125,8 @@ void GSimulation :: start()
   init_acc();
   init_mass();
   
-  print_header();
+  if (world_rank == 0) 
+    print_header();
   
   _totTime = 0.; 
  
@@ -137,6 +144,8 @@ void GSimulation :: start()
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   {   
+   // TODO: 
+   // update all ranks with latest data from master
    ts0 += time.start(); 
    for (i = 0; i < n; i++)// update acceleration
    {
@@ -199,25 +208,26 @@ void GSimulation :: start()
     _kenergy = 0.5 * energy; 
     
     ts1 += time.stop();
-    if(!(s%get_sfreq()) ) 
-    {
-      nf += 1;      
-      std::cout << " " 
-		<<  std::left << std::setw(8)  << s
-		<<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
-		<<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
-		<<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
-		<<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
-		<<  std::endl;
-      if(nf > 2) 
+    if (world_rank == 0)
+      if(!(s%get_sfreq()) ) 
       {
-	av  += gflops*get_sfreq()/(ts1 - ts0);
-	dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
+        nf += 1;      
+        std::cout << " " 
+      <<  std::left << std::setw(8)  << s
+      <<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
+      <<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
+      <<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
+      <<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
+      <<  std::endl;
+        if(nf > 2) 
+        {
+    av  += gflops*get_sfreq()/(ts1 - ts0);
+    dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
+        }
+        
+        ts0 = 0;
+        ts1 = 0;
       }
-      
-      ts0 = 0;
-      ts1 = 0;
-    }
   
   } //end of the time step loop
   
@@ -230,11 +240,13 @@ void GSimulation :: start()
   
   int nthreads=1;
 
-  std::cout << std::endl;
-  std::cout << "# Number Threads     : " << nthreads << std::endl;	   
-  std::cout << "# Total Time (s)     : " << _totTime << std::endl;
-  std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
-  std::cout << "===============================" << std::endl;
+  if (world_rank == 0) {
+    std::cout << std::endl;
+    std::cout << "# Number Threads     : " << nthreads << std::endl;	   
+    std::cout << "# Total Time (s)     : " << _totTime << std::endl;
+    std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
+    std::cout << "===============================" << std::endl;
+  }
 
 }
 
