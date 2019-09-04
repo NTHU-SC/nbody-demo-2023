@@ -178,8 +178,6 @@ void GSimulation :: start()
    start = world_rank * world_n;
    end = start + world_n;
 
-//   std::cout << "Rank#" << world_rank<< " start:" << start << " end:" <<end << std::endl;
-
    for (i = start; i < end; i++)// update acceleration
    {
 #ifdef ASALIGN
@@ -233,7 +231,10 @@ void GSimulation :: start()
      }
      //dump(send_buf, 10)
      MPI_Send(send_buf, msg_len, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
- } else {
+ } 
+   
+   if (world_rank == 0)
+   for (int ranks = 1; ranks < world_size; ranks++ ) {
      MPI_Status status;
      float buf[msg_len]; // buffer for MPI recv
      int sender = 0;
@@ -255,6 +256,8 @@ void GSimulation :: start()
 
    } //end comm
 
+
+   MPI_Barrier(MPI_COMM_WORLD);
    // print energy
   if (world_rank == 0) {
    energy = 0;
@@ -273,15 +276,6 @@ void GSimulation :: start()
      particles->acc_y[i] = 0.;
      particles->acc_z[i] = 0.;
 	
-     energy += particles->mass[i] * (
-	       particles->vel_x[i]*particles->vel_x[i] + 
-               particles->vel_y[i]*particles->vel_y[i] +
-               particles->vel_z[i]*particles->vel_z[i]); //7flops
-   }
-  
-    _kenergy = 0.5 * energy; 
-   for (i = 0; i < n; ++i)// update position
-   {
      energy += particles->mass[i] * (
 	       particles->vel_x[i]*particles->vel_x[i] + 
                particles->vel_y[i]*particles->vel_y[i] +
