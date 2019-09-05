@@ -114,7 +114,7 @@ void GSimulation :: start()
     world_n = n / world_size;
   }
   int max_world_n = n / world_size + n % world_size;
-  std::cout << "Rank: " << world_rank << " Share: " << world_n << std::endl;
+  //std::cout << "Rank: " << world_rank << " Share: " << world_n << std::endl;
   int i,j;
  
   const int alignment = 32;
@@ -135,9 +135,6 @@ void GSimulation :: start()
   init_vel();
   init_acc();
   init_mass();
-  MPI_Bcast(particles->mass, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
-
   
   if (world_rank == 0) 
     print_header();
@@ -215,49 +212,62 @@ void GSimulation :: start()
      particles->acc_z[i] = az_i;
    }
 
-   // send new to master
-   int msg_len = max_world_n * 3 + 2;
-   if (world_rank != 0) {
-     // make a payload
-     float send_buf[msg_len]; // 3 * 3 + sender
-       send_buf[0] = float(world_rank);
-       send_buf[1] = float(world_n);
+   float accx[n];
+   float accy[n];
+   float accz[n];
+   MPI_Gather(particles->acc_x + start, world_n, MPI_FLOAT, accx, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(particles->acc_y + start, world_n, MPI_FLOAT, accy, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(particles->acc_z + start, world_n, MPI_FLOAT, accz, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-       int idx = int(send_buf[0] * send_buf[1]);
-     for (int ii = 0; ii < world_n; ii++) {
-       send_buf[2 + ii + 0*max_world_n] = particles->acc_x[ii + idx];
-       send_buf[2 + ii + 1*max_world_n] = particles->acc_y[ii + idx];
-       send_buf[2 + ii + 2*max_world_n] = particles->acc_z[ii + idx];
-     }
-     //dump(send_buf, 10)
-     MPI_Send(send_buf, msg_len, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
- } 
-   
-   if (world_rank == 0)
-   for (int ranks = 1; ranks < world_size; ranks++ ) {
-     MPI_Status status;
-     float buf[msg_len]; // buffer for MPI recv
-     int sender = 0;
+   for (int ii = 0; ii < n; ii++) {
+     particles->acc_x[ii] = accx[ii];
+     particles->acc_y[ii] = accy[ii];
+     particles->acc_z[ii] = accz[ii];
+   }
 
-     MPI_Recv(buf, msg_len, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-     //dump(buf, 10)
-     int sender_rank = int(buf[0]);
-     int sender_size = int(buf[1]);
-     int idx = int(buf[1]) * int(buf[0]);
-//     std::cout << "Received message from: " << sender_rank << std::endl;
-//     std::cout << "Elements received: " << sender_size << std::endl;
-     
-     for (int ii = 0; ii < sender_size; ii++) {
-       particles->acc_x[ii + idx] = buf[2 + ii + 0*max_world_n];
-       particles->acc_y[ii + idx] = buf[2 + ii + 1*max_world_n];
-       particles->acc_z[ii + idx] = buf[2 + ii + 2*max_world_n];
-     }
-
-
-   } //end comm
-
-
-   MPI_Barrier(MPI_COMM_WORLD);
+//   // send new to master
+//   int msg_len = max_world_n * 3 + 2;
+//   if (world_rank != 0) {
+//     // make a payload
+//     float send_buf[msg_len]; // 3 * 3 + sender
+//       send_buf[0] = float(world_rank);
+//       send_buf[1] = float(world_n);
+//
+//       int idx = int(send_buf[0] * send_buf[1]);
+//     for (int ii = 0; ii < world_n; ii++) {
+//       send_buf[2 + ii + 0*max_world_n] = particles->acc_x[ii + idx];
+//       send_buf[2 + ii + 1*max_world_n] = particles->acc_y[ii + idx];
+//       send_buf[2 + ii + 2*max_world_n] = particles->acc_z[ii + idx];
+//     }
+//     //dump(send_buf, 10)
+//     MPI_Send(send_buf, msg_len, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+// } 
+//   
+//   if (world_rank == 0)
+//   for (int ranks = 1; ranks < world_size; ranks++ ) {
+//     MPI_Status status;
+//     float buf[msg_len]; // buffer for MPI recv
+//     int sender = 0;
+//
+//     MPI_Recv(buf, msg_len, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+//     //dump(buf, 10)
+//     int sender_rank = int(buf[0]);
+//     int sender_size = int(buf[1]);
+//     int idx = int(buf[1]) * int(buf[0]);
+////     std::cout << "Received message from: " << sender_rank << std::endl;
+////     std::cout << "Elements received: " << sender_size << std::endl;
+//     
+//     for (int ii = 0; ii < sender_size; ii++) {
+//       particles->acc_x[ii + idx] = buf[2 + ii + 0*max_world_n];
+//       particles->acc_y[ii + idx] = buf[2 + ii + 1*max_world_n];
+//       particles->acc_z[ii + idx] = buf[2 + ii + 2*max_world_n];
+//     }
+//
+//
+//   } //end comm
+//
+//
+//   MPI_Barrier(MPI_COMM_WORLD);
    // print energy
   if (world_rank == 0) {
    energy = 0;
