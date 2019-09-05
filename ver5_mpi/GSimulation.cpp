@@ -107,6 +107,14 @@ void GSimulation :: start()
   real_type dt = get_tstep();
   int n = get_npart();
   int world_n;
+
+  // quit if uneven domains
+  if (n % world_size != 0) {
+    MPI_Finalize();
+  if (world_rank == 0)
+    std::cout << "Number of particles not divisible by MPI Ranks. Quitting..." << std::endl;
+    exit(1);
+  }
   // get share n
   if (world_rank == 0) {
     world_n = n / world_size + n % world_size;
@@ -212,51 +220,51 @@ void GSimulation :: start()
      particles->acc_z[i] = az_i;
    }
 
-//   float accx[n];
-//   float accy[n];
-//   float accz[n];
-//   MPI_Gather(particles->acc_x + start, world_n, MPI_FLOAT, accx, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-//   MPI_Gather(particles->acc_y + start, world_n, MPI_FLOAT, accy, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-//   MPI_Gather(particles->acc_z + start, world_n, MPI_FLOAT, accz, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   float accx[n];
+   float accy[n];
+   float accz[n];
+   MPI_Gather(particles->acc_x + start, world_n, MPI_FLOAT, accx, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(particles->acc_y + start, world_n, MPI_FLOAT, accy, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(particles->acc_z + start, world_n, MPI_FLOAT, accz, world_n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+   for (int ii = 0; ii < n; ii++) {
+     particles->acc_x[ii] = accx[ii];
+     particles->acc_y[ii] = accy[ii];
+     particles->acc_z[ii] = accz[ii];
+   }
+
+//   // send new to master
+//   int msg_len = max_world_n * 3 + 2;
+//   float buf[msg_len];
+//   if (world_rank != 0) {
+//       buf[0] = float(world_rank);
+//       buf[1] = float(world_n);
+//       int idx = world_rank * world_n;
+//       // pack the buffer with data
+//       for (int ii = 0; ii < world_n; ii++) {
+//         buf[2 + 0 * max_world_n + ii] = particles->acc_x[ii + idx];
+//         buf[2 + 1 * max_world_n + ii] = particles->acc_y[ii + idx];
+//         buf[2 + 2 * max_world_n + ii] = particles->acc_z[ii + idx];
+//       }
+//     MPI_Send(buf, msg_len, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+//   } 
+//   
+//   if (world_rank == 0)
+//   for (int ranks = 1; ranks < world_size; ranks++) {
+//     MPI_Status status;
+//     MPI_Recv(buf, msg_len, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+//     int sender_rank = int(buf[0]);
+//     int sender_size = int(buf[1]);
+//     int idx = sender_rank * sender_size;
+//     
+//     for (int ii = 0; ii < sender_size; ii++) {
+//       particles->acc_x[idx + ii] = buf[2 + 0 * max_world_n + ii];
+//       particles->acc_y[idx + ii] = buf[2 + 1 * max_world_n + ii];
+//       particles->acc_z[idx + ii] = buf[2 + 2 * max_world_n + ii];
+//     }
 //
-//   for (int ii = 0; ii < n; ii++) {
-//     particles->acc_x[ii] = accx[ii];
-//     particles->acc_y[ii] = accy[ii];
-//     particles->acc_z[ii] = accz[ii];
-//   }
-
-   // send new to master
-   int msg_len = max_world_n * 3 + 2;
-   float buf[msg_len];
-   if (world_rank != 0) {
-       buf[0] = float(world_rank);
-       buf[1] = float(world_n);
-       int idx = world_rank * world_n;
-       // pack the buffer with data
-       for (int ii = 0; ii < world_n; ii++) {
-         buf[2 + 0 * max_world_n + ii] = particles->acc_x[ii + idx];
-         buf[2 + 1 * max_world_n + ii] = particles->acc_y[ii + idx];
-         buf[2 + 2 * max_world_n + ii] = particles->acc_z[ii + idx];
-       }
-     MPI_Send(buf, msg_len, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-   } 
-   
-   if (world_rank == 0)
-   for (int ranks = 1; ranks < world_size; ranks++) {
-     MPI_Status status;
-     MPI_Recv(buf, msg_len, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-     int sender_rank = int(buf[0]);
-     int sender_size = int(buf[1]);
-     int idx = sender_rank * sender_size;
-     
-     for (int ii = 0; ii < sender_size; ii++) {
-       particles->acc_x[idx + ii] = buf[2 + 0 * max_world_n + ii];
-       particles->acc_y[idx + ii] = buf[2 + 1 * max_world_n + ii];
-       particles->acc_z[idx + ii] = buf[2 + 2 * max_world_n + ii];
-     }
-
-
-   } //end comm
+//
+//   } //end comm
 
 
    // print energy
