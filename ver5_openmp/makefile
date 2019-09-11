@@ -1,5 +1,5 @@
 CXX = icpx
-COMPFLAGS = -g -std=c++11 -O3 -gline-tables-only
+COMPFLAGS = -std=c++11 -O3 -gline-tables-only
 OPTFLAGS = #-xHost
 OMPFLAGS = -fiopenmp -fopenmp-targets=spir64 -no-ipo
 REPFLAGS = #-qopt-report=5 -qopt-report-filter="GSimulation.cpp,130-220" 
