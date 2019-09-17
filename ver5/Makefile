@@ -1,6 +1,6 @@
 CXX = icpc
 COMPFLAGS = -g -std=c++11 -O2 -DASALIGN 
-OPTFLAGS = -xAVX2
+OPTFLAGS = -xhost
 OMPFLAGS = -qopenmp-simd
 REPFLAGS = -qopt-report=5 -qopt-report-filter="GSimulation.cpp,130-220" 
 INCLUDES = 
