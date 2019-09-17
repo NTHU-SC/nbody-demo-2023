@@ -182,7 +182,7 @@ map(to: tmp_particles_mass [:n]) \
        dz = tmp_particles_pos_z[j] - tmp_particles_pos_z[i];	//1flop
     
        distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
-       distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+       distanceInv = 1.0f / sqrtf(distanceSqr);			//1div+1sqrt
 
        ax_i += dx * G * tmp_particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
        ay_i += dy * G * tmp_particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
