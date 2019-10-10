@@ -54,11 +54,11 @@ int main(int argc, char** argv)
       if (!a.compare(std::string("cpu+gpu"))) sim.set_devices(3);
 
     if(argc > 4) 
-      sim.set_cpu_ratio(atof(argv[3]));
+      sim.set_cpu_ratio(atof(argv[4]));
 
     if(argc > 5) {
-      sim.set_cpu_wgsize(atoi(argv[4]));
-      sim.set_gpu_wgsize(atoi(argv[5]));
+      sim.set_cpu_wgsize(atoi(argv[5]));
+      sim.set_gpu_wgsize(atoi(argv[6]));
     }
   }
   
