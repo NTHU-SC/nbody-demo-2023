@@ -17,8 +17,16 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <stdlib.h>
 #include <CL/sycl.hpp>
+#include <random>
+
+#include <iomanip>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <stdlib.h>
+
 
 #include "GSimulation.hpp"
 #include "cpu_time.hpp"
@@ -98,26 +106,21 @@ void GSimulation :: init_mass()
 
 void GSimulation :: start() 
 {
-
-  queue q; // = queue(cpu_selector{});
-  // cycle through all OpenCL platforms
-  std::vector<platform> platforms = platform().get_platforms();
-  for (auto &plat : platforms) {
-    for (auto &dev : plat.get_devices(info::device_type::gpu))
-      q = queue(dev);
+  std::cout << "device option: " << get_devices() << std::endl;
+  std::vector<queue> q;
+  if (get_devices() == 1) {
+    q.push_back(queue(cpu_selector()));
+  } else if (get_devices() == 2) {
+    q.push_back(queue(gpu_selector()));
+  } else {
+    q.push_back(queue(cpu_selector()));
+    q.push_back(queue(gpu_selector()));
   }
-  std::cout << q.get_device().get_info<info::device::name>() << std::endl;
 
-  queue q_cpu; // = queue(cpu_selector{});
-  for (auto &plat : platforms) {
-    for (auto &dev : plat.get_devices(info::device_type::cpu))
-      q_cpu = queue(dev);
+  for (int i = 0; i < q.size(); i++) {
+    std::cout << "Device #" << i << ": ";
+    std::cout << q[i].get_device().get_info<info::device::name>() << std::endl;
   }
-  std::cout << q_cpu.get_device().get_info<info::device::name>() << std::endl;
-
-  std::vector<queue> qs;
-  qs.push_back(q_cpu);
-  qs.push_back(q);
 
 
   real_type energy;
@@ -190,7 +193,7 @@ void GSimulation :: start()
      auto particles_pos_z_d2 = buffer<real_type, 1>(particles_pos_z_d,id<1>(1000), range<1>(1000));
 
 
-    q.submit([&] (handler& cgh)  {
+    q[0].submit([&] (handler& cgh)  {
      auto particles_acc_x_d1 = buffer<real_type, 1>(particles_acc_x_d,id<1>(0), range<1>(1000));
      auto particles_acc_y_d1 = buffer<real_type, 1>(particles_acc_y_d,id<1>(0), range<1>(1000));
      auto particles_acc_z_d1 = buffer<real_type, 1>(particles_acc_z_d,id<1>(0), range<1>(1000));
@@ -251,7 +254,7 @@ void GSimulation :: start()
 
    
 
-    q.submit([&] (handler& cgh)  {
+    q[0].submit([&] (handler& cgh)  {
      auto particles_acc_x_d2 = buffer<real_type, 1>(particles_acc_x_d,id<1>(1000), range<1>(1000));
      auto particles_acc_y_d2 = buffer<real_type, 1>(particles_acc_y_d,id<1>(1000), range<1>(1000));
      auto particles_acc_z_d2 = buffer<real_type, 1>(particles_acc_z_d,id<1>(1000), range<1>(1000));
