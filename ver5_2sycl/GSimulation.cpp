@@ -255,9 +255,8 @@ void GSimulation :: start()
 
 
        cgh.parallel_for<class update_accel>(
-         nd_range<1>(range<1>(shares[qi]), range<1>(offsets[qi])), [=](nd_item<1> item) {
-           auto i = item.get_global_linear_id();
-           int of  = item.get_offset()[0];
+         nd_range<1>(range<1>(shares[qi]), range<1>(), id<1>(offsets[qi])), [=](nd_item<1> item) {
+           auto i = item.get_global_id();
 
      real_type ax_i = particles_acc_x[i];
      real_type ay_i = particles_acc_y[i];
