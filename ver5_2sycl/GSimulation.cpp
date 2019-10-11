@@ -230,8 +230,6 @@ void GSimulation :: start()
       std::vector<buffer<real_type, 1>> particles_pos_z_d; 
 
       std::vector<buffer<real_type, 1>> particles_mass_d;
-
-
       
       for (int qi = 0; qi < q.size(); qi++)
       {
@@ -239,9 +237,9 @@ void GSimulation :: start()
         particles_acc_y_d.push_back(buffer<real_type, 1>(particles->acc_y + offsets[qi], range<1>(shares[qi])));
         particles_acc_z_d.push_back(buffer<real_type, 1>(particles->acc_z + offsets[qi], range<1>(shares[qi])));
 
-        particles_pos_x_d.push_back(buffer<real_type, 1>(particles->pos_x + offsets[qi], range<1>(shares[qi])));
-        particles_pos_y_d.push_back(buffer<real_type, 1>(particles->pos_y + offsets[qi], range<1>(shares[qi])));
-        particles_pos_z_d.push_back(buffer<real_type, 1>(particles->pos_z + offsets[qi], range<1>(shares[qi])));
+        particles_pos_x_d.push_back(buffer<real_type, 1>(particles->pos_x, range<1>(n)));
+        particles_pos_y_d.push_back(buffer<real_type, 1>(particles->pos_y, range<1>(n)));
+        particles_pos_z_d.push_back(buffer<real_type, 1>(particles->pos_z, range<1>(n)));
         
         particles_mass_d.push_back(buffer<real_type, 1>(particles->mass, range<1>(n)));
       }
