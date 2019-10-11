@@ -233,7 +233,13 @@ void GSimulation :: start()
       std::vector<buffer<real_type, 1>> particles_pos_y_d;
       std::vector<buffer<real_type, 1>> particles_pos_z_d; 
 
+      auto particles_pos_x_d_host = buffer<real_type, 1>(particles->pos_x, range<1>(n));
+      auto particles_pos_y_d_host = buffer<real_type, 1>(particles->pos_y, range<1>(n));
+      auto particles_pos_z_d_host = buffer<real_type, 1>(particles->pos_z, range<1>(n));
+
+
       std::vector<buffer<real_type, 1>> particles_mass_d;
+      auto particles_mass_d_host = buffer<real_type, 1>(particles->mass, range<1>(n));
       
       for (int qi = 0; qi < q.size(); qi++)
       {
@@ -241,11 +247,11 @@ void GSimulation :: start()
         particles_acc_y_d.push_back(buffer<real_type, 1>(particles_acc_y_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
         particles_acc_z_d.push_back(buffer<real_type, 1>(particles_acc_z_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
 
-        particles_pos_x_d.push_back(buffer<real_type, 1>(particles->pos_x, range<1>(n)));
-        particles_pos_y_d.push_back(buffer<real_type, 1>(particles->pos_y, range<1>(n)));
-        particles_pos_z_d.push_back(buffer<real_type, 1>(particles->pos_z, range<1>(n)));
+        particles_pos_x_d.push_back(buffer<real_type, 1>(particles_pos_x_d_host, id<1>(0), range<1>(n)));
+        particles_pos_y_d.push_back(buffer<real_type, 1>(particles_pos_y_d_host, id<1>(0), range<1>(n)));
+        particles_pos_z_d.push_back(buffer<real_type, 1>(particles_pos_z_d_host, id<1>(0), range<1>(n)));
         
-        particles_mass_d.push_back(buffer<real_type, 1>(particles->mass, range<1>(n)));
+        particles_mass_d.push_back(buffer<real_type, 1>(particles_mass_d_host, id<1>(0), range<1>(n)));
       }
 
       auto offsets_b = buffer<int, 1>(offsets, range<1>(num_devices));
