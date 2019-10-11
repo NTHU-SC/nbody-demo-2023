@@ -163,9 +163,7 @@ void GSimulation :: start()
 
 
   std::cout << "CPU to GPU work ratio: " << cpu_ratio << std::endl;
-
-
-
+  //
   // print device names
   for (int i = 0; i < q.size(); i++) {
     std::cout << "Device #" << i << ": ";
@@ -226,23 +224,35 @@ void GSimulation :: start()
       std::vector<buffer<real_type, 1>> particles_acc_x_d;
       std::vector<buffer<real_type, 1>> particles_acc_y_d;
       std::vector<buffer<real_type, 1>> particles_acc_z_d;
+
+      std::vector<buffer<real_type, 1>> particles_vel_x_d;
+      std::vector<buffer<real_type, 1>> particles_vel_y_d;
+      std::vector<buffer<real_type, 1>> particles_vel_z_d;
+
+      std::vector<buffer<real_type, 1>> particles_pos_x_d;
+      std::vector<buffer<real_type, 1>> particles_pos_y_d;
+      std::vector<buffer<real_type, 1>> particles_pos_z_d; 
+
+      std::vector<buffer<real_type, 1>> particles_mass_d;
+
+
       
-      auto particles_pos_x_d = buffer<real_type, 1>(particles->pos_x, range<1>(n));
-      auto particles_pos_y_d = buffer<real_type, 1>(particles->pos_y, range<1>(n));
-      auto particles_pos_z_d = buffer<real_type, 1>(particles->pos_z, range<1>(n));
-
-      auto particles_vel_x_d = buffer<real_type, 1>(particles->vel_x, range<1>(n));
-      auto particles_vel_y_d = buffer<real_type, 1>(particles->vel_y, range<1>(n));
-      auto particles_vel_z_d = buffer<real_type, 1>(particles->vel_z, range<1>(n));
-
       for (int qi = 0; qi < q.size(); qi++)
       {
         particles_acc_x_d.push_back(buffer<real_type, 1>(particles->acc_x + offsets[qi], range<1>(shares[qi])));
         particles_acc_y_d.push_back(buffer<real_type, 1>(particles->acc_y + offsets[qi], range<1>(shares[qi])));
         particles_acc_z_d.push_back(buffer<real_type, 1>(particles->acc_z + offsets[qi], range<1>(shares[qi])));
+
+        particles_pos_x_d.push_back(buffer<real_type, 1>(particles->pos_x + offsets[qi], range<1>(shares[qi])));
+        particles_pos_y_d.push_back(buffer<real_type, 1>(particles->pos_y + offsets[qi], range<1>(shares[qi])));
+        particles_pos_z_d.push_back(buffer<real_type, 1>(particles->pos_z + offsets[qi], range<1>(shares[qi])));
+        
+        particles_vel_x_d.push_back(buffer<real_type, 1>(particles->vel_x + offsets[qi], range<1>(shares[qi])));
+        particles_vel_y_d.push_back(buffer<real_type, 1>(particles->vel_y + offsets[qi], range<1>(shares[qi])));
+        particles_vel_z_d.push_back(buffer<real_type, 1>(particles->vel_z + offsets[qi], range<1>(shares[qi])));
+        particles_mass_d.push_back(buffer<real_type, 1>(particles->mass, range<1>(n)));
       }
 
-      auto particles_mass_d  = buffer<real_type, 1>(particles->mass, range<1>(n));
 
       for (int qi = 0; qi < q.size(); qi++)
         q[qi].submit([&] (handler& cgh)  {
@@ -250,15 +260,15 @@ void GSimulation :: start()
           auto particles_acc_y = particles_acc_y_d[qi].get_access<access::mode::read_write>(cgh);
           auto particles_acc_z = particles_acc_z_d[qi].get_access<access::mode::read_write>(cgh);
 
-          auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read>(cgh);
-          auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read>(cgh);
-          auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read>(cgh);
+          auto particles_vel_x = particles_vel_x_d[qi].get_access<access::mode::read>(cgh);
+          auto particles_vel_y = particles_vel_y_d[qi].get_access<access::mode::read>(cgh);
+          auto particles_vel_z = particles_vel_z_d[qi].get_access<access::mode::read>(cgh);
 
-          auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read>(cgh);
-          auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read>(cgh);
-          auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read>(cgh);
+          auto particles_pos_x = particles_pos_x_d[qi].get_access<access::mode::read>(cgh);
+          auto particles_pos_y = particles_pos_y_d[qi].get_access<access::mode::read>(cgh);
+          auto particles_pos_z = particles_pos_z_d[qi].get_access<access::mode::read>(cgh);
 
-          auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
+          auto particles_mass = particles_mass_d[qi].get_access<access::mode::read>(cgh);
 
 
           cgh.parallel_for<class update_accel>(
