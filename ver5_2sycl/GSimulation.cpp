@@ -158,8 +158,8 @@ void GSimulation :: start()
 
 
   // data/array offsets for splitting work CPU/GPU
-  size_t* shares = new size_t(num_devices);
-  size_t* offsets = new size_t(num_devices);
+  int* shares = new int(num_devices);
+  int* offsets = new int(num_devices);
 
 
   std::cout << "CPU to GPU work ratio: " << cpu_ratio << std::endl;
@@ -225,6 +225,10 @@ void GSimulation :: start()
       std::vector<buffer<real_type, 1>> particles_acc_y_d;
       std::vector<buffer<real_type, 1>> particles_acc_z_d;
 
+      auto particles_acc_x_d_host = buffer<real_type, 1>(particles->acc_x, range<1>(n));
+      auto particles_acc_y_d_host = buffer<real_type, 1>(particles->acc_y, range<1>(n));
+      auto particles_acc_z_d_host = buffer<real_type, 1>(particles->acc_z, range<1>(n));
+
       std::vector<buffer<real_type, 1>> particles_pos_x_d;
       std::vector<buffer<real_type, 1>> particles_pos_y_d;
       std::vector<buffer<real_type, 1>> particles_pos_z_d; 
@@ -233,9 +237,9 @@ void GSimulation :: start()
       
       for (int qi = 0; qi < q.size(); qi++)
       {
-        particles_acc_x_d.push_back(buffer<real_type, 1>(particles->acc_x + offsets[qi], range<1>(shares[qi])));
-        particles_acc_y_d.push_back(buffer<real_type, 1>(particles->acc_y + offsets[qi], range<1>(shares[qi])));
-        particles_acc_z_d.push_back(buffer<real_type, 1>(particles->acc_z + offsets[qi], range<1>(shares[qi])));
+        particles_acc_x_d.push_back(buffer<real_type, 1>(particles_acc_x_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
+        particles_acc_y_d.push_back(buffer<real_type, 1>(particles_acc_y_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
+        particles_acc_z_d.push_back(buffer<real_type, 1>(particles_acc_z_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
 
         particles_pos_x_d.push_back(buffer<real_type, 1>(particles->pos_x, range<1>(n)));
         particles_pos_y_d.push_back(buffer<real_type, 1>(particles->pos_y, range<1>(n)));
@@ -243,6 +247,8 @@ void GSimulation :: start()
         
         particles_mass_d.push_back(buffer<real_type, 1>(particles->mass, range<1>(n)));
       }
+
+      auto offsets_b = buffer<int, 1>(offsets, range<1>(num_devices));
 
 
       for (int qi = 0; qi < q.size(); qi++)
@@ -257,10 +263,11 @@ void GSimulation :: start()
 
           auto particles_mass = particles_mass_d[qi].get_access<access::mode::read>(cgh);
 
+          auto offsets_ba = offsets_b.get_access<access::mode::read>(cgh);
+
 
           cgh.parallel_for<class update_accel>(
-            nd_range<1>(range<1>(shares[qi]), range<1>(), id<1>(offsets[qi])), [=](nd_item<1> item) {
-              auto i = item.get_global_id();
+            nd_range<1>(shares[qi], 0, 0), [=](id<1> i) {
 
               real_type ax_i = particles_acc_x[i];
               real_type ay_i = particles_acc_y[i];
@@ -272,9 +279,9 @@ void GSimulation :: start()
 	              real_type distanceSqr = 0.0f;
 	              real_type distanceInv = 0.0f;
 	                 
-	              dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
-	              dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
-	              dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
+	              dx = particles_pos_x[j] - particles_pos_x[i + offsets_ba[qi]];	//1flop
+	              dy = particles_pos_y[j] - particles_pos_y[i + offsets_ba[qi]];	//1flop	
+	              dz = particles_pos_z[j] - particles_pos_z[i + offsets_ba[qi]];	//1flop
 	 
  	              distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
  	              distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
