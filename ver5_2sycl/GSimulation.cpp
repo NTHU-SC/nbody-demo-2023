@@ -150,7 +150,7 @@ void GSimulation :: start()
     if (num_devices > 1) {
       cpu_ratio = _cpu_ratio;
       tuning = (cpu_ratio < 0);
-      if (tuning) cpu_ratio = 0;
+      if (tuning) cpu_ratio = 0.01; // not 0 because can't create 0 length buffers
     } else {
       cpu_ratio = 1.0f;
       tuning = false;
@@ -317,6 +317,13 @@ void GSimulation :: start()
     ts1 += time.stop();
     if(!(s%get_sfreq()) ) 
     {
+      if (tuning)
+       {
+         printf("CPU/GPU ratio = %f\n", cpu_ratio);
+         cpu_ratio += 0.01;
+         if (cpu_ratio > 1.0f) cpu_ratio = 1.0f;
+       }
+
       nf += 1;      
       std::cout << " " 
 		<<  std::left << std::setw(8)  << s
