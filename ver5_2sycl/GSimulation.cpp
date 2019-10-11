@@ -176,18 +176,20 @@ void GSimulation :: start()
   int i;
 
   const int alignment = 32;
-  particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
+  device d = q[0].get_device();
+  context ctx = q[0].get_context();
+  particles = static_cast<ParticleSoA*>(malloc_shared(sizeof(ParticleSoA), d, ctx));
 
-  particles->pos_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->pos_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->pos_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->mass  = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles->pos_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->pos_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->pos_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->vel_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->vel_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->vel_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->acc_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->acc_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->acc_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles->mass  = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
 
   init_pos();	
   init_vel();
@@ -220,90 +222,41 @@ void GSimulation :: start()
       offsets[i] = n * cpu_ratio;
     }
 
-    { // buffer scope
-      std::vector<buffer<real_type, 1>> particles_acc_x_d;
-      std::vector<buffer<real_type, 1>> particles_acc_y_d;
-      std::vector<buffer<real_type, 1>> particles_acc_z_d;
+    //for (int qi = 0; qi < q.size(); qi++)
+      auto e = q[0].submit([&] (handler& cgh)  {
+        cgh.parallel_for<class update_accel>(
+          nd_range<1>(2000, 0, 0), [=](nd_item<1> item) {
 
-      auto particles_acc_x_d_host = buffer<real_type, 1>(particles->acc_x, range<1>(n));
-      auto particles_acc_y_d_host = buffer<real_type, 1>(particles->acc_y, range<1>(n));
-      auto particles_acc_z_d_host = buffer<real_type, 1>(particles->acc_z, range<1>(n));
+            int i = item.get_global_id()[0];
+            real_type ax_i = particles->acc_x[i];
+            real_type ay_i = particles->acc_y[i];
+            real_type az_i = particles->acc_z[i];
 
-      std::vector<buffer<real_type, 1>> particles_pos_x_d;
-      std::vector<buffer<real_type, 1>> particles_pos_y_d;
-      std::vector<buffer<real_type, 1>> particles_pos_z_d; 
+            for (int j = 0; j < 2000; j++)
+            {
+              real_type dx, dy, dz;
+	            real_type distanceSqr = 0.0f;
+	            real_type distanceInv = 0.0f;
+	               
+	            dx = particles->pos_x[j] - particles->pos_x[i];	//1flop
+	            dy = particles->pos_y[j] - particles->pos_y[i];	//1flop	
+	            dz = particles->pos_z[j] - particles->pos_z[i];	//1flop
+ 
+ 	            distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+ 	            distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
-      auto particles_pos_x_d_host = buffer<real_type, 1>(particles->pos_x, range<1>(n));
-      auto particles_pos_y_d_host = buffer<real_type, 1>(particles->pos_y, range<1>(n));
-      auto particles_pos_z_d_host = buffer<real_type, 1>(particles->pos_z, range<1>(n));
-
-
-      std::vector<buffer<real_type, 1>> particles_mass_d;
-      auto particles_mass_d_host = buffer<real_type, 1>(particles->mass, range<1>(n));
-      
-      for (int qi = 0; qi < q.size(); qi++)
-      {
-        particles_acc_x_d.push_back(buffer<real_type, 1>(particles_acc_x_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
-        particles_acc_y_d.push_back(buffer<real_type, 1>(particles_acc_y_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
-        particles_acc_z_d.push_back(buffer<real_type, 1>(particles_acc_z_d_host, id<1>(offsets[qi]), range<1>(shares[qi])));
-
-        particles_pos_x_d.push_back(buffer<real_type, 1>(particles_pos_x_d_host, id<1>(0), range<1>(n)));
-        particles_pos_y_d.push_back(buffer<real_type, 1>(particles_pos_y_d_host, id<1>(0), range<1>(n)));
-        particles_pos_z_d.push_back(buffer<real_type, 1>(particles_pos_z_d_host, id<1>(0), range<1>(n)));
-        
-        particles_mass_d.push_back(buffer<real_type, 1>(particles_mass_d_host, id<1>(0), range<1>(n)));
-      }
-
-      auto offsets_b = buffer<int, 1>(offsets, range<1>(num_devices));
-
-
-      for (int qi = 0; qi < q.size(); qi++)
-        q[qi].submit([&] (handler& cgh)  {
-          auto particles_acc_x = particles_acc_x_d[qi].get_access<access::mode::read_write>(cgh);
-          auto particles_acc_y = particles_acc_y_d[qi].get_access<access::mode::read_write>(cgh);
-          auto particles_acc_z = particles_acc_z_d[qi].get_access<access::mode::read_write>(cgh);
-
-          auto particles_pos_x = particles_pos_x_d[qi].get_access<access::mode::read>(cgh);
-          auto particles_pos_y = particles_pos_y_d[qi].get_access<access::mode::read>(cgh);
-          auto particles_pos_z = particles_pos_z_d[qi].get_access<access::mode::read>(cgh);
-
-          auto particles_mass = particles_mass_d[qi].get_access<access::mode::read>(cgh);
-
-          auto offsets_ba = offsets_b.get_access<access::mode::read>(cgh);
-
-
-          cgh.parallel_for<class update_accel>(
-            nd_range<1>(shares[qi], 0, 0), [=](id<1> i) {
-
-              real_type ax_i = particles_acc_x[i];
-              real_type ay_i = particles_acc_y[i];
-              real_type az_i = particles_acc_z[i];
-
-              for (int j = 0; j < n; j++)
-              {
-                real_type dx, dy, dz;
-	              real_type distanceSqr = 0.0f;
-	              real_type distanceInv = 0.0f;
-	                 
-	              dx = particles_pos_x[j] - particles_pos_x[i + offsets_ba[qi]];	//1flop
-	              dy = particles_pos_y[j] - particles_pos_y[i + offsets_ba[qi]];	//1flop	
-	              dz = particles_pos_z[j] - particles_pos_z[i + offsets_ba[qi]];	//1flop
-	 
- 	              distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	              distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
-
-	              ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	              ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	              az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-              }
-              particles_acc_x[i] = ax_i;
-              particles_acc_y[i] = ay_i;
-              particles_acc_z[i] = az_i;
+	            ax_i += dx * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	            ay_i += dy * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	            az_i += dz * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+            }
+            particles->acc_x[i] = ax_i;
+            particles->acc_y[i] = ay_i;
+            particles->acc_z[i] = az_i;
 
         }); // end of parallel for scope
       }); // end of command group scope
-    } // end of buffer scope
 
+    e.wait();
     // no device side reductions so have to do it here
     energy = 0;
     for (int i = 0; i < n; ++i)// update position
@@ -399,16 +352,16 @@ void GSimulation :: print_header()
 
 GSimulation :: ~GSimulation()
 {
-  _mm_free(particles->pos_x);
-  _mm_free(particles->pos_y);
-  _mm_free(particles->pos_z);
-  _mm_free(particles->vel_x);
-  _mm_free(particles->vel_y);
-  _mm_free(particles->vel_z);
-  _mm_free(particles->acc_x);
-  _mm_free(particles->acc_y);
-  _mm_free(particles->acc_z);
-  _mm_free(particles->mass);
-  _mm_free(particles);
+//  free(particles->pos_x);
+//  free(particles->pos_y);
+//  free(particles->pos_z);
+//  free(particles->vel_x);
+//  free(particles->vel_y);
+//  free(particles->vel_z);
+//  free(particles->acc_x);
+//  free(particles->acc_y);
+//  free(particles->acc_z);
+//  free(particles->mass);
+//  free(particles);
 
 }
