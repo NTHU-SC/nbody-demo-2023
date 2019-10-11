@@ -213,7 +213,8 @@ void GSimulation :: start()
   
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
-  {   
+  { // time step loop
+    ts0 += time.start(); 
     shares[0] = n * cpu_ratio;
     offsets[0] = 0;
     for (int i = 1; i < num_devices; i++) {
@@ -221,127 +222,124 @@ void GSimulation :: start()
       offsets[i] = n * cpu_ratio;
     }
 
-   ts0 += time.start(); 
-   {
-     auto particles_pos_x_d = buffer<real_type, 1>(particles->pos_x, range<1>(n));
-     auto particles_pos_y_d = buffer<real_type, 1>(particles->pos_y, range<1>(n));
-     auto particles_pos_z_d = buffer<real_type, 1>(particles->pos_z, range<1>(n));
+    { // buffer scope
+      auto particles_pos_x_d = buffer<real_type, 1>(particles->pos_x, range<1>(n));
+      auto particles_pos_y_d = buffer<real_type, 1>(particles->pos_y, range<1>(n));
+      auto particles_pos_z_d = buffer<real_type, 1>(particles->pos_z, range<1>(n));
 
-     auto particles_vel_x_d = buffer<real_type, 1>(particles->vel_x, range<1>(n));
-     auto particles_vel_y_d = buffer<real_type, 1>(particles->vel_y, range<1>(n));
-     auto particles_vel_z_d = buffer<real_type, 1>(particles->vel_z, range<1>(n));
+      auto particles_vel_x_d = buffer<real_type, 1>(particles->vel_x, range<1>(n));
+      auto particles_vel_y_d = buffer<real_type, 1>(particles->vel_y, range<1>(n));
+      auto particles_vel_z_d = buffer<real_type, 1>(particles->vel_z, range<1>(n));
 
-     auto particles_acc_x_d = buffer<real_type, 1>(particles->acc_x, range<1>(n));
-     auto particles_acc_y_d = buffer<real_type, 1>(particles->acc_y, range<1>(n));
-     auto particles_acc_z_d = buffer<real_type, 1>(particles->acc_z, range<1>(n));
+      auto particles_acc_x_d = buffer<real_type, 1>(particles->acc_x, range<1>(n));
+      auto particles_acc_y_d = buffer<real_type, 1>(particles->acc_y, range<1>(n));
+      auto particles_acc_z_d = buffer<real_type, 1>(particles->acc_z, range<1>(n));
 
-     auto particles_mass_d  = buffer<real_type, 1>(particles->mass, range<1>(n));
+      auto particles_mass_d  = buffer<real_type, 1>(particles->mass, range<1>(n));
 
-    for (int qi = 0; qi < q.size(); qi++)
-    q[qi].submit([&] (handler& cgh)  {
-       auto particles_acc_x = particles_acc_x_d.get_access<access::mode::read_write>(cgh);
-       auto particles_acc_y = particles_acc_y_d.get_access<access::mode::read_write>(cgh);
-       auto particles_acc_z = particles_acc_z_d.get_access<access::mode::read_write>(cgh);
+      for (int qi = 0; qi < q.size(); qi++)
+        q[qi].submit([&] (handler& cgh)  {
+          auto particles_acc_x = particles_acc_x_d.get_access<access::mode::read_write>(cgh);
+          auto particles_acc_y = particles_acc_y_d.get_access<access::mode::read_write>(cgh);
+          auto particles_acc_z = particles_acc_z_d.get_access<access::mode::read_write>(cgh);
 
-       auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read>(cgh);
-       auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read>(cgh);
-       auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read>(cgh);
+          auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read>(cgh);
+          auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read>(cgh);
+          auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read>(cgh);
 
-       auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read>(cgh);
-       auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read>(cgh);
-       auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read>(cgh);
+          auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read>(cgh);
+          auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read>(cgh);
+          auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read>(cgh);
 
-       auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
-
-
-       cgh.parallel_for<class update_accel>(
-         nd_range<1>(range<1>(shares[qi]), range<1>(), id<1>(offsets[qi])), [=](nd_item<1> item) {
-           auto i = item.get_global_id();
-
-     real_type ax_i = particles_acc_x[i];
-     real_type ay_i = particles_acc_y[i];
-     real_type az_i = particles_acc_z[i];
-
-     for (int j = 0; j < n; j++)
-     {
-       real_type dx, dy, dz;
-	     real_type distanceSqr = 0.0f;
-	     real_type distanceInv = 0.0f;
-	        
-	     dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
-	     dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
-	     dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
-	
- 	     distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	     distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
-
-	     ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	     ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	     az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-     }
-     particles_acc_x[i] = ax_i;
-     particles_acc_y[i] = ay_i;
-     particles_acc_z[i] = az_i;
-
-         }); // end of parallel for scope
-       }); // end of command group scope
-
-   } // end of buffer scope
-
-   // no device side reductions so have to do it here
-   energy = 0;
-   for (int i = 0; i < n; ++i)// update position
-   {
-
-     particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
-     particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
-     particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
-	  
-     particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
-     particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
-     particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
+          auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
 
 
-         particles->acc_x[i] = 0.;
-         particles->acc_y[i] = 0.;
-         particles->acc_z[i] = 0.;
+          cgh.parallel_for<class update_accel>(
+            nd_range<1>(range<1>(shares[qi]), range<1>(), id<1>(offsets[qi])), [=](nd_item<1> item) {
+              auto i = item.get_global_id();
 
-     energy += particles->mass[i] * (
-	       particles->vel_x[i]*particles->vel_x[i] + 
-               particles->vel_y[i]*particles->vel_y[i] +
-               particles->vel_z[i]*particles->vel_z[i]); //7flops
-   }
-  _kenergy = 0.5 * energy; 
+              real_type ax_i = particles_acc_x[i];
+              real_type ay_i = particles_acc_y[i];
+              real_type az_i = particles_acc_z[i];
 
-    
-    ts1 += time.stop();
-    if(!(s%get_sfreq()) ) 
+              for (int j = 0; j < n; j++)
+              {
+                real_type dx, dy, dz;
+	              real_type distanceSqr = 0.0f;
+	              real_type distanceInv = 0.0f;
+	                 
+	              dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
+	              dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
+	              dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
+	 
+ 	              distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+ 	              distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+
+	              ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	              ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	              az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+              }
+              particles_acc_x[i] = ax_i;
+              particles_acc_y[i] = ay_i;
+              particles_acc_z[i] = az_i;
+
+        }); // end of parallel for scope
+      }); // end of command group scope
+    } // end of buffer scope
+
+    // no device side reductions so have to do it here
+    energy = 0;
+    for (int i = 0; i < n; ++i)// update position
     {
-      if (tuning)
-       {
-         printf("CPU/GPU ratio = %f\n", cpu_ratio);
-         cpu_ratio += 0.01;
-         if (cpu_ratio > 1.0f) cpu_ratio = 1.0f;
-       }
 
-      nf += 1;      
-      std::cout << " " 
-		<<  std::left << std::setw(8)  << s
-		<<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
-		<<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
-		<<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
-		<<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
-		<<  std::endl;
-      if(nf > 2) 
-      {
-	av  += gflops*get_sfreq()/(ts1 - ts0);
-	dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
-      }
-      
-      ts0 = 0;
-      ts1 = 0;
+      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
+      particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
+      particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
+	   
+      particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
+      particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
+      particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
+
+
+          particles->acc_x[i] = 0.;
+          particles->acc_y[i] = 0.;
+          particles->acc_z[i] = 0.;
+
+      energy += particles->mass[i] * (
+	        particles->vel_x[i]*particles->vel_x[i] + 
+                particles->vel_y[i]*particles->vel_y[i] +
+                particles->vel_z[i]*particles->vel_z[i]); //7flops
     }
-  
+   _kenergy = 0.5 * energy; 
+
+     
+     ts1 += time.stop();
+     if(!(s%get_sfreq()) ) 
+     {
+       if (tuning)
+        {
+          printf("CPU/GPU ratio = %f\n", cpu_ratio);
+          cpu_ratio += 0.01;
+          if (cpu_ratio > 1.0f) cpu_ratio = 1.0f;
+        }
+
+       nf += 1;      
+       std::cout << " " 
+	 	<<  std::left << std::setw(8)  << s
+	 	<<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
+	 	<<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
+	 	<<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
+	 	<<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
+	 	<<  std::endl;
+       if(nf > 2) 
+       {
+	 av  += gflops*get_sfreq()/(ts1 - ts0);
+	 dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
+       }
+       
+       ts0 = 0;
+       ts1 = 0;
+     }
   } //end of the time step loop
   
   const double t1 = time.stop();
