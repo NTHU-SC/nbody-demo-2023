@@ -1,5 +1,5 @@
 CXX = clang++
-COMPFLAGS = -std=c++14 -O2 -lsycl -lOpenCL -g
+COMPFLAGS = -std=c++14 -O2 -fsycl -lsycl -lOpenCL
 #CXX = compute++
 #COMPFLAGS = -g -std=c++11 -O2 -lComputeCpp -sycl-driver # -sycl-target spir64
 OPTFLAGS = 
