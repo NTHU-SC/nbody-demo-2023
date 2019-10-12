@@ -223,10 +223,10 @@ void GSimulation :: start()
       offsets[i] = n * cpu_ratio;
     }
 
-    //for (int qi = 0; qi < q.size(); qi++)
     real_type energy_t = 0;
-      int qi = 0;
-      auto e = q[qi].submit([&] (handler& cgh)  {
+    event e[num_devices];
+    for (int qi = 0; qi < q.size(); qi++)
+        e[qi] = q[qi].submit([&] (handler& cgh)  {
         cgh.parallel_for<class update_accel>(
           nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
 
@@ -274,7 +274,9 @@ void GSimulation :: start()
         }); // end of parallel for scope
       }); // end of command group scope
 
-    e.wait();
+    for (int i = 0; i < num_devices; i++)
+      e[i].wait();
+
     for (int i = 0; i < n; ++i)// update position
     {
       energy_t += tmp->mass[i] * (
