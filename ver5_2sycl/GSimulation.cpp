@@ -223,16 +223,17 @@ void GSimulation :: start()
     }
 
     //for (int qi = 0; qi < q.size(); qi++)
-      auto e = q[0].submit([&] (handler& cgh)  {
+      int qi = 0;
+      auto e = q[qi].submit([&] (handler& cgh)  {
         cgh.parallel_for<class update_accel>(
-          nd_range<1>(2000, 0, 0), [=](nd_item<1> item) {
+          nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
 
             int i = item.get_global_id()[0];
             real_type ax_i = particles->acc_x[i];
             real_type ay_i = particles->acc_y[i];
             real_type az_i = particles->acc_z[i];
 
-            for (int j = 0; j < 2000; j++)
+            for (int j = 0; j < n; j++)
             {
               real_type dx, dy, dz;
 	            real_type distanceSqr = 0.0f;
