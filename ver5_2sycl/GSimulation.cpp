@@ -211,7 +211,7 @@ void GSimulation :: start()
   double av=0.0, dev=0.0;
   int nf = 0;
   
-  auto tmp = particles; // temp fix due to bug 
+  auto tmp = particles; // temp fix due to bug t
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   { // time step loop
@@ -224,6 +224,7 @@ void GSimulation :: start()
     }
 
     //for (int qi = 0; qi < q.size(); qi++)
+    real_type energy_t = 0;
       int qi = 0;
       auto e = q[qi].submit([&] (handler& cgh)  {
         cgh.parallel_for<class update_accel>(
@@ -255,34 +256,35 @@ void GSimulation :: start()
             tmp->acc_y[i] = ay_i;
             tmp->acc_z[i] = az_i;
 
+    // no device side reductions so have to do it here
+
+      tmp->vel_x[i] += tmp->acc_x[i] * dt; //2flops
+      tmp->vel_y[i] += tmp->acc_y[i] * dt; //2flops
+      tmp->vel_z[i] += tmp->acc_z[i] * dt; //2flops
+	   
+      tmp->pos_x[i] += tmp->vel_x[i] * dt; //2flops
+      tmp->pos_y[i] += tmp->vel_y[i] * dt; //2flops
+      tmp->pos_z[i] += tmp->vel_z[i] * dt; //2flops
+
+
+          tmp->acc_x[i] = 0.;
+          tmp->acc_y[i] = 0.;
+          tmp->acc_z[i] = 0.;
+
         }); // end of parallel for scope
       }); // end of command group scope
 
     e.wait();
-    // no device side reductions so have to do it here
-    energy = 0;
     for (int i = 0; i < n; ++i)// update position
     {
-
-      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
-      particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
-      particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
-	   
-      particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
-      particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
-      particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
-
-
-          particles->acc_x[i] = 0.;
-          particles->acc_y[i] = 0.;
-          particles->acc_z[i] = 0.;
-
-      energy += particles->mass[i] * (
-	        particles->vel_x[i]*particles->vel_x[i] + 
-                particles->vel_y[i]*particles->vel_y[i] +
-                particles->vel_z[i]*particles->vel_z[i]); //7flops
+      energy_t += tmp->mass[i] * (
+ 	       tmp->vel_x[i]*tmp->vel_x[i] + 
+                tmp->vel_y[i]*tmp->vel_y[i] +
+                tmp->vel_z[i]*tmp->vel_z[i]); //7flops
+      _kenergy = 0.5 * energy_t; 
     }
-   _kenergy = 0.5 * energy; 
+
+
 
      
      ts1 += time.stop();
