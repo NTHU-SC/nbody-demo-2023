@@ -211,6 +211,7 @@ void GSimulation :: start()
   double av=0.0, dev=0.0;
   int nf = 0;
   
+  auto tmp = particles; // temp fix due to bug 
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   { // time step loop
@@ -229,9 +230,9 @@ void GSimulation :: start()
           nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
 
             int i = item.get_global_id()[0];
-            real_type ax_i = particles->acc_x[i];
-            real_type ay_i = particles->acc_y[i];
-            real_type az_i = particles->acc_z[i];
+            real_type ax_i = tmp->acc_x[i];
+            real_type ay_i = tmp->acc_y[i];
+            real_type az_i = tmp->acc_z[i];
 
             for (int j = 0; j < n; j++)
             {
@@ -239,20 +240,20 @@ void GSimulation :: start()
 	            real_type distanceSqr = 0.0f;
 	            real_type distanceInv = 0.0f;
 	               
-	            dx = particles->pos_x[j] - particles->pos_x[i];	//1flop
-	            dy = particles->pos_y[j] - particles->pos_y[i];	//1flop	
-	            dz = particles->pos_z[j] - particles->pos_z[i];	//1flop
+	            dx = tmp->pos_x[j] - tmp->pos_x[i];	//1flop
+	            dy = tmp->pos_y[j] - tmp->pos_y[i];	//1flop	
+	            dz = tmp->pos_z[j] - tmp->pos_z[i];	//1flop
  
  	            distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
  	            distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
-	            ax_i += dx * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	            ay_i += dy * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	            az_i += dz * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	            ax_i += dx * G * tmp->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	            ay_i += dy * G * tmp->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	            az_i += dz * G * tmp->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
             }
-            particles->acc_x[i] = ax_i;
-            particles->acc_y[i] = ay_i;
-            particles->acc_z[i] = az_i;
+            tmp->acc_x[i] = ax_i;
+            tmp->acc_y[i] = ay_i;
+            tmp->acc_z[i] = az_i;
 
         }); // end of parallel for scope
       }); // end of command group scope
