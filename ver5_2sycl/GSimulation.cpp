@@ -259,9 +259,9 @@ void GSimulation :: start()
 
       for (int qi = 0; qi < q.size(); qi++)
         q[qi].submit([&] (handler& cgh)  {
-          auto particles_acc_x = particles_acc_x_d[qi].get_access<access::mode::read_write>(cgh);
-          auto particles_acc_y = particles_acc_y_d[qi].get_access<access::mode::read_write>(cgh);
-          auto particles_acc_z = particles_acc_z_d[qi].get_access<access::mode::read_write>(cgh);
+          auto particles_acc_x = particles_acc_x_d[qi].get_access<access::mode::write>(cgh);
+          auto particles_acc_y = particles_acc_y_d[qi].get_access<access::mode::write>(cgh);
+          auto particles_acc_z = particles_acc_z_d[qi].get_access<access::mode::write>(cgh);
 
           auto particles_pos_x = particles_pos_x_d[qi].get_access<access::mode::read>(cgh);
           auto particles_pos_y = particles_pos_y_d[qi].get_access<access::mode::read>(cgh);
@@ -274,17 +274,17 @@ void GSimulation :: start()
 
           cgh.parallel_for<class update_accel>(
             nd_range<1>(shares[qi], 0, 0), [=](id<1> i) {
-
-              real_type ax_i = particles_acc_x[i];
-              real_type ay_i = particles_acc_y[i];
-              real_type az_i = particles_acc_z[i];
+//            nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
+//              const int i = item.get_global_id()[0];
+              real_type ax_i = 0;
+              real_type ay_i = 0;
+              real_type az_i = 0;
+              real_type dx, dy, dz;
+	            real_type distanceSqr = 0.0f;
+	            real_type distanceInv = 0.0f;
 
               for (int j = 0; j < n; j++)
               {
-                real_type dx, dy, dz;
-	              real_type distanceSqr = 0.0f;
-	              real_type distanceInv = 0.0f;
-	                 
 	              dx = particles_pos_x[j] - particles_pos_x[i + offsets_ba[qi]];	//1flop
 	              dy = particles_pos_y[j] - particles_pos_y[i + offsets_ba[qi]];	//1flop	
 	              dz = particles_pos_z[j] - particles_pos_z[i + offsets_ba[qi]];	//1flop
