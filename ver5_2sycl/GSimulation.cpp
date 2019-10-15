@@ -225,8 +225,23 @@ void GSimulation :: start()
   double gflops = 1e-9 * ( (11. + 18. ) * nd*nd  +  nd * 19. );
   double av=0.0, dev=0.0;
   int nf = 0;
-  
+
   auto tmp = particles_usm; // temp fix due to bug t
+        q[0].memcpy(tmp->pos_x, particles->pos_x, sizeof(real_type)*n);
+        q[0].memcpy(tmp->pos_y, particles->pos_y, sizeof(real_type)*n);
+        q[0].memcpy(tmp->pos_z, particles->pos_z, sizeof(real_type)*n);
+
+        q[0].memcpy(tmp->acc_x, particles->acc_x, sizeof(real_type)*n);
+        q[0].memcpy(tmp->acc_y, particles->acc_y, sizeof(real_type)*n);
+        q[0].memcpy(tmp->acc_z, particles->acc_z, sizeof(real_type)*n);
+
+        q[0].memcpy(tmp->vel_x, particles->vel_x, sizeof(real_type)*n);
+        q[0].memcpy(tmp->vel_y, particles->vel_y, sizeof(real_type)*n);
+        q[0].memcpy(tmp->vel_z, particles->vel_z, sizeof(real_type)*n);
+
+        q[0].memcpy(tmp->mass, particles->mass, sizeof(real_type)*n);
+
+  
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   { // time step loop
@@ -241,29 +256,19 @@ void GSimulation :: start()
     real_type energy_t = 0;
     event e[num_devices];
 
+    for (int qi = 0; qi < q.size(); qi++)
+        e[qi] = q[qi].submit([&] (handler& cgh)  {
         q[0].memcpy(tmp->pos_x, particles->pos_x, sizeof(real_type)*n);
         q[0].memcpy(tmp->pos_y, particles->pos_y, sizeof(real_type)*n);
         q[0].memcpy(tmp->pos_z, particles->pos_z, sizeof(real_type)*n);
-
-        q[0].memcpy(tmp->acc_x, particles->acc_x, sizeof(real_type)*n);
-        q[0].memcpy(tmp->acc_y, particles->acc_y, sizeof(real_type)*n);
-        q[0].memcpy(tmp->acc_z, particles->acc_z, sizeof(real_type)*n);
-
-        q[0].memcpy(tmp->vel_x, particles->vel_x, sizeof(real_type)*n);
-        q[0].memcpy(tmp->vel_y, particles->vel_y, sizeof(real_type)*n);
-        q[0].memcpy(tmp->vel_z, particles->vel_z, sizeof(real_type)*n);
-
-        q[0].memcpy(tmp->mass, particles->mass, sizeof(real_type)*n);
-    for (int qi = 0; qi < q.size(); qi++)
-        e[qi] = q[qi].submit([&] (handler& cgh)  {
 
         cgh.parallel_for<class update_accel>(
           nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
 
             int i = item.get_global_id()[0];
-            real_type ax_i = tmp->acc_x[i];
-            real_type ay_i = tmp->acc_y[i];
-            real_type az_i = tmp->acc_z[i];
+            real_type ax_i = 0;
+            real_type ay_i = 0;
+            real_type az_i = 0;
 
             for (int j = 0; j < n; j++)
             {
@@ -315,7 +320,6 @@ void GSimulation :: start()
         q[0].memcpy( particles->vel_y, tmp->vel_y,sizeof(real_type)*n);
         q[0].memcpy( particles->vel_z, tmp->vel_z,sizeof(real_type)*n);
 
-        q[0].memcpy(particles->mass, tmp->mass, sizeof(real_type)*n);
 
     for (int i = 0; i < num_devices; i++)
       e[i].wait();
