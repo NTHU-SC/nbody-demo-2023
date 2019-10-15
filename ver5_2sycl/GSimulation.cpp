@@ -291,7 +291,24 @@ void GSimulation :: start()
             tmp->acc_y[i] = ay_i;
             tmp->acc_z[i] = az_i;
 
+        }); // end of parallel for scope
+      }); // end of command group scope
     // no device side reductions so have to do it here
+        //q[0].memcpy( particles->pos_x, tmp->pos_x,sizeof(real_type)*n);
+        //q[0].memcpy( particles->pos_y, tmp->pos_y,sizeof(real_type)*n);
+        //q[0].memcpy( particles->pos_z, tmp->pos_z,sizeof(real_type)*n);
+
+        q[0].memcpy( particles->acc_x, tmp->acc_x,sizeof(real_type)*n);
+        q[0].memcpy( particles->acc_y, tmp->acc_y,sizeof(real_type)*n);
+        q[0].memcpy( particles->acc_z, tmp->acc_z,sizeof(real_type)*n);
+
+        //q[0].memcpy( particles->vel_x, tmp->vel_x,sizeof(real_type)*n);
+        //q[0].memcpy( particles->vel_y, tmp->vel_y,sizeof(real_type)*n);
+        //auto aa = q[0].memcpy( particles->vel_z, tmp->vel_z,sizeof(real_type)*n);
+
+    for (int i = 0; i < num_devices; i++)
+      e[i].wait();
+
 
       tmp->vel_x[i] += tmp->acc_x[i] * dt; //2flops
       tmp->vel_y[i] += tmp->acc_y[i] * dt; //2flops
@@ -302,27 +319,11 @@ void GSimulation :: start()
       tmp->pos_z[i] += tmp->vel_z[i] * dt; //2flops
 
 
-          tmp->acc_x[i] = 0.;
-          tmp->acc_y[i] = 0.;
-          tmp->acc_z[i] = 0.;
-
-        }); // end of parallel for scope
-      }); // end of command group scope
-        q[0].memcpy( particles->pos_x, tmp->pos_x,sizeof(real_type)*n);
-        q[0].memcpy( particles->pos_y, tmp->pos_y,sizeof(real_type)*n);
-        q[0].memcpy( particles->pos_z, tmp->pos_z,sizeof(real_type)*n);
-
-        q[0].memcpy( particles->acc_x, tmp->acc_x,sizeof(real_type)*n);
-        q[0].memcpy( particles->acc_y, tmp->acc_y,sizeof(real_type)*n);
-        q[0].memcpy( particles->acc_z, tmp->acc_z,sizeof(real_type)*n);
-
-        q[0].memcpy( particles->vel_x, tmp->vel_x,sizeof(real_type)*n);
-        q[0].memcpy( particles->vel_y, tmp->vel_y,sizeof(real_type)*n);
-        q[0].memcpy( particles->vel_z, tmp->vel_z,sizeof(real_type)*n);
+          //tmp->acc_x[i] = 0.;
+          //tmp->acc_y[i] = 0.;
+          //tmp->acc_z[i] = 0.;
 
 
-    for (int i = 0; i < num_devices; i++)
-      e[i].wait();
 
     for (int i = 0; i < n; ++i)// update position
     {
