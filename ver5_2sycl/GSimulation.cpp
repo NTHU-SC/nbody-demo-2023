@@ -178,18 +178,33 @@ void GSimulation :: start()
   const int alignment = 32;
   device d = q[0].get_device();
   context ctx = q[0].get_context();
-  particles = static_cast<ParticleSoA*>(malloc_shared(sizeof(ParticleSoA), d, ctx));
+  auto particles_usm = static_cast<ParticleSoA*>(malloc_device(sizeof(ParticleSoA), d, ctx));
 
-  particles->pos_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->pos_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->pos_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->vel_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->vel_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->vel_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->acc_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->acc_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->acc_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
-  particles->mass  = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->pos_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->pos_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->pos_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->vel_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->vel_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->vel_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->acc_x = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->acc_y = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->acc_z = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+  particles_usm->mass  = static_cast<real_type*>(malloc_shared(n*sizeof(real_type), d, ctx));
+
+  particles = static_cast<ParticleSoA*>(malloc(sizeof(ParticleSoA)));
+
+  particles->pos_x = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->pos_y = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->pos_z = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->vel_x = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->vel_y = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->vel_z = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->acc_x = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->acc_y = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->acc_z = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+  particles->mass  = static_cast<real_type*>(malloc(n*sizeof(real_type)));
+
+
 
   init_pos();	
   init_vel();
@@ -211,7 +226,7 @@ void GSimulation :: start()
   double av=0.0, dev=0.0;
   int nf = 0;
   
-  auto tmp = particles; // temp fix due to bug t
+  auto tmp = particles_usm; // temp fix due to bug t
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   { // time step loop
@@ -227,6 +242,20 @@ void GSimulation :: start()
     event e[num_devices];
     for (int qi = 0; qi < q.size(); qi++)
         e[qi] = q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->pos_x, particles->pos_x, sizeof(real_type)*n);
+        cgh.memcpy(tmp->pos_y, particles->pos_y, sizeof(real_type)*n);
+        cgh.memcpy(tmp->pos_z, particles->pos_z, sizeof(real_type)*n);
+
+        cgh.memcpy(tmp->acc_x, particles->acc_x, sizeof(real_type)*n);
+        cgh.memcpy(tmp->acc_y, particles->acc_y, sizeof(real_type)*n);
+        cgh.memcpy(tmp->acc_z, particles->acc_z, sizeof(real_type)*n);
+
+        cgh.memcpy(tmp->vel_x, particles->vel_x, sizeof(real_type)*n);
+        cgh.memcpy(tmp->vel_y, particles->vel_y, sizeof(real_type)*n);
+        cgh.memcpy(tmp->vel_z, particles->vel_z, sizeof(real_type)*n);
+
+        cgh.memcpy(tmp->mass, particles->mass, sizeof(real_type)*n);
+
         cgh.parallel_for<class update_accel>(
           nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
 
@@ -272,6 +301,23 @@ void GSimulation :: start()
           tmp->acc_z[i] = 0.;
 
         }); // end of parallel for scope
+
+        cgh.memcpy( particles->pos_x, tmp->pos_x,sizeof(real_type)*n);
+        cgh.memcpy( particles->pos_y, tmp->pos_y,sizeof(real_type)*n);
+        cgh.memcpy( particles->pos_z, tmp->pos_z,sizeof(real_type)*n);
+                                                 
+        cgh.memcpy( particles->acc_x, tmp->acc_x,sizeof(real_type)*n);
+        cgh.memcpy( particles->acc_y, tmp->acc_y,sizeof(real_type)*n);
+        cgh.memcpy( particles->acc_z, tmp->acc_z,sizeof(real_type)*n);
+                                                 
+        cgh.memcpy( particles->vel_x, tmp->vel_x,sizeof(real_type)*n);
+        cgh.memcpy( particles->vel_y, tmp->vel_y,sizeof(real_type)*n);
+        cgh.memcpy( particles->vel_z, tmp->vel_z,sizeof(real_type)*n);
+                                                 
+        cgh.memcpy(particles->mass, tmp->mass, sizeof(real_type)*n);
+
+
+
       }); // end of command group scope
 
     for (int i = 0; i < num_devices; i++)
