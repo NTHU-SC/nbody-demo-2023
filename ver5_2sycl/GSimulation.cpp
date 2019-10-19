@@ -273,9 +273,8 @@ void GSimulation :: start()
 
 
           cgh.parallel_for<class update_accel>(
-            nd_range<1>(shares[qi], 0, 0), [=](id<1> i) {
-//            nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
-//              const int i = item.get_global_id()[0];
+            nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
+              const int i = item.get_global_id()[0];
               real_type ax_i = 0;
               real_type ay_i = 0;
               real_type az_i = 0;
