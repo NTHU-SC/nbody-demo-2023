@@ -108,18 +108,18 @@ void GSimulation :: start()
 {
   int n = get_npart();
   std::cout << "device option: " << get_devices() << std::endl;
-  std::vector<queue> q;
+  std::vector<ordered_queue> q;
   int num_devices = 0;
   if (get_devices() == 1) {
-    q.push_back(queue(cpu_selector()));
+    q.push_back(ordered_queue(cpu_selector()));
     num_devices = 1;
   } else if (get_devices() == 2) {
-    q.push_back(queue(gpu_selector()));
+    q.push_back(ordered_queue(gpu_selector()));
     num_devices = 1;
   } else {
     num_devices = 2;
-    q.push_back(queue(cpu_selector()));
-    q.push_back(queue(gpu_selector()));
+    q.push_back(ordered_queue(cpu_selector()));
+    q.push_back(ordered_queue(gpu_selector()));
   }
 
     /* Set up workgroup sizes
@@ -240,21 +240,50 @@ void GSimulation :: start()
 
     real_type energy_t = 0;
     event e[num_devices];
+
+
+    // copy in
+    for (int qi = 0; qi < q.size(); qi++)
+    {
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->pos_x, particles->pos_x, sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->pos_y, particles->pos_y, sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->pos_z, particles->pos_z, sizeof(real_type)*n);
+      }); // end of command group scope
+
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->vel_x, particles->vel_x, sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->vel_y, particles->vel_y, sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->vel_z, particles->vel_z, sizeof(real_type)*n);
+      }); // end of command group scope
+
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->acc_x, particles->acc_x, sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->acc_y, particles->acc_y, sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->acc_z, particles->acc_z, sizeof(real_type)*n);
+      }); // end of command group scope
+
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy(tmp->mass, particles->mass, sizeof(real_type)*n);
+      }); // end of command group scope
+
+    }
+
+    // compute
     for (int qi = 0; qi < q.size(); qi++)
         e[qi] = q[qi].submit([&] (handler& cgh)  {
-        cgh.memcpy(tmp->pos_x, particles->pos_x, sizeof(real_type)*n);
-        cgh.memcpy(tmp->pos_y, particles->pos_y, sizeof(real_type)*n);
-        cgh.memcpy(tmp->pos_z, particles->pos_z, sizeof(real_type)*n);
-
-        cgh.memcpy(tmp->acc_x, particles->acc_x, sizeof(real_type)*n);
-        cgh.memcpy(tmp->acc_y, particles->acc_y, sizeof(real_type)*n);
-        cgh.memcpy(tmp->acc_z, particles->acc_z, sizeof(real_type)*n);
-
-        cgh.memcpy(tmp->vel_x, particles->vel_x, sizeof(real_type)*n);
-        cgh.memcpy(tmp->vel_y, particles->vel_y, sizeof(real_type)*n);
-        cgh.memcpy(tmp->vel_z, particles->vel_z, sizeof(real_type)*n);
-
-        cgh.memcpy(tmp->mass, particles->mass, sizeof(real_type)*n);
 
         cgh.parallel_for<class update_accel>(
           nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
@@ -301,24 +330,45 @@ void GSimulation :: start()
           tmp->acc_z[i] = 0.;
 
         }); // end of parallel for scope
-
-        cgh.memcpy( particles->pos_x, tmp->pos_x,sizeof(real_type)*n);
-        cgh.memcpy( particles->pos_y, tmp->pos_y,sizeof(real_type)*n);
-        cgh.memcpy( particles->pos_z, tmp->pos_z,sizeof(real_type)*n);
-                                                 
-        cgh.memcpy( particles->acc_x, tmp->acc_x,sizeof(real_type)*n);
-        cgh.memcpy( particles->acc_y, tmp->acc_y,sizeof(real_type)*n);
-        cgh.memcpy( particles->acc_z, tmp->acc_z,sizeof(real_type)*n);
-                                                 
-        cgh.memcpy( particles->vel_x, tmp->vel_x,sizeof(real_type)*n);
-        cgh.memcpy( particles->vel_y, tmp->vel_y,sizeof(real_type)*n);
-        cgh.memcpy( particles->vel_z, tmp->vel_z,sizeof(real_type)*n);
-                                                 
-        cgh.memcpy(particles->mass, tmp->mass, sizeof(real_type)*n);
-
-
-
       }); // end of command group scope
+
+    for (int qi = 0; qi < q.size(); qi++)
+    {
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->pos_x, tmp->pos_x,sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->pos_y, tmp->pos_y,sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->pos_z, tmp->pos_z,sizeof(real_type)*n);
+      }); // end of command group scope
+
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->vel_x, tmp->vel_x,sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->vel_y, tmp->vel_y,sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->vel_z, tmp->vel_z,sizeof(real_type)*n);
+      }); // end of command group scope
+
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->acc_x, tmp->acc_x,sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->acc_y, tmp->acc_y,sizeof(real_type)*n);
+      }); // end of command group scope
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->acc_z, tmp->acc_z,sizeof(real_type)*n);
+      }); // end of command group scope
+
+        q[qi].submit([&] (handler& cgh)  {
+        cgh.memcpy( particles->mass, tmp->mass,sizeof(real_type)*n);
+      }); // end of command group scope
+
+    }
 
     for (int i = 0; i < num_devices; i++)
       e[i].wait();
