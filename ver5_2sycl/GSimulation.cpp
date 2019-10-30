@@ -257,10 +257,15 @@ void GSimulation :: start()
       }
 
       auto offsets_b = buffer<int, 1>(offsets, range<1>(num_devices));
+      auto shares_b = buffer<int, 1>(shares, range<1>(num_devices));
 
-      auto num_groups = q[0].get_device().get_info<info::device::max_compute_units>();
-      auto work_group_size =q[0].get_device().get_info<info::device::max_work_group_size>();
-      auto total_threads = num_groups * work_group_size;
+      std::vector<int>total_threads(num_devices);
+      for (int qi = 0; qi < q.size(); qi++)
+      {
+        auto num_groups = q[qi].get_device().get_info<info::device::max_compute_units>();
+        auto work_group_size =q[qi].get_device().get_info<info::device::max_work_group_size>();
+        total_threads.push_back(num_groups * work_group_size);
+      }
 
       for (int qi = 0; qi < q.size(); qi++)
         q[qi].submit([&] (handler& cgh)  {
@@ -276,14 +281,13 @@ void GSimulation :: start()
           auto particles_mass = particles_mass_d[qi].get_access<access::mode::read>(cgh);
 
           auto offsets_ba = offsets_b.get_access<access::mode::read>(cgh);
+          auto shares_ba = shares_b.get_access<access::mode::read>(cgh);
 
           cgh.parallel_for<class update_accel>(
-            //nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
-            nd_range<1>(total_threads, 0, 0), [=](nd_item<1> item) {
-
-            for (int i = item.get_global_id()[0]; i < n; i+=total_threads) 
+            range<1>(total_threads[qi]), [=](item<1> item) {
+            //for (int i = item.get_id()[0]; i < shares_ba[qi]; i+=total_threads[qi]) // error
+            for (int i = item.get_id()[0]; i < shares_ba[qi]; i+=item.get_range()[0]) // error
             {
-              //const int i = item.get_global_id()[0];
               real_type ax_i = 0;
               real_type ay_i = 0;
               real_type az_i = 0;
