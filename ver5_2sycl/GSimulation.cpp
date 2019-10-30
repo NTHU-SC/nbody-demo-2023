@@ -283,10 +283,17 @@ void GSimulation :: start()
           auto offsets_ba = offsets_b.get_access<access::mode::read>(cgh);
           auto shares_ba = shares_b.get_access<access::mode::read>(cgh);
 
+            //range<1>(total_threads[qi]), [=](item<1> item) {
+            //for (int i = item.get_id()[0]; i < shares_ba[qi]; i+=item.get_range()[0]) // bad result
+
+            //nd_range<1>(total_threads[qi], 0, 0), [=](nd_item<1> item) {
+            //for (int i = item.get_id()[0]; i < shares_ba[qi]; i+=total_threads[qi]) // compiler fail LLVM ERROR: llvm.memmove of non-constant length not supported
+
+            //nd_range<1>(total_threads[qi], 0, 0), [=](nd_item<1> item) {
+            //for (int i = item.get_global_id()[0]; i < shares_ba[qi]; i+=item.get_nd_range().get_global_range()[0]) // bad result
           cgh.parallel_for<class update_accel>(
-            range<1>(total_threads[qi]), [=](item<1> item) {
-            //for (int i = item.get_id()[0]; i < shares_ba[qi]; i+=total_threads[qi]) // error
-            for (int i = item.get_id()[0]; i < shares_ba[qi]; i+=item.get_range()[0]) // error
+            nd_range<1>(total_threads[qi], 0, 0), [=](nd_item<1> item) {
+            for (int i = item.get_global_id()[0]; i < shares_ba[qi]; i+=total_threads[qi]) // bad result
             {
               real_type ax_i = 0;
               real_type ay_i = 0;
