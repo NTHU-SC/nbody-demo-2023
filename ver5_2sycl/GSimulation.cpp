@@ -240,6 +240,8 @@ void GSimulation :: start()
 
       std::vector<buffer<real_type, 1>> particles_mass_d;
       auto particles_mass_d_host = buffer<real_type, 1>(particles->mass, range<1>(n));
+
+
       
       for (int qi = 0; qi < q.size(); qi++)
       {
@@ -256,9 +258,13 @@ void GSimulation :: start()
 
       auto offsets_b = buffer<int, 1>(offsets, range<1>(num_devices));
 
+      auto num_groups = q[0].get_device().get_info<info::device::max_compute_units>();
+      auto work_group_size =q[0].get_device().get_info<info::device::max_work_group_size>();
+      auto total_threads = num_groups * work_group_size;
 
       for (int qi = 0; qi < q.size(); qi++)
         q[qi].submit([&] (handler& cgh)  {
+
           auto particles_acc_x = particles_acc_x_d[qi].get_access<access::mode::write>(cgh);
           auto particles_acc_y = particles_acc_y_d[qi].get_access<access::mode::write>(cgh);
           auto particles_acc_z = particles_acc_z_d[qi].get_access<access::mode::write>(cgh);
@@ -271,10 +277,13 @@ void GSimulation :: start()
 
           auto offsets_ba = offsets_b.get_access<access::mode::read>(cgh);
 
-
           cgh.parallel_for<class update_accel>(
-            nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
-              const int i = item.get_global_id()[0];
+            //nd_range<1>(shares[qi], 0, 0), [=](nd_item<1> item) {
+            nd_range<1>(total_threads, 0, 0), [=](nd_item<1> item) {
+
+            for (int i = item.get_global_id()[0]; i < n; i+=total_threads) 
+            {
+              //const int i = item.get_global_id()[0];
               real_type ax_i = 0;
               real_type ay_i = 0;
               real_type az_i = 0;
@@ -299,6 +308,7 @@ void GSimulation :: start()
               particles_acc_y[i] = ay_i;
               particles_acc_z[i] = az_i;
 
+            }
         }); // end of parallel for scope
       }); // end of command group scope
     } // end of buffer scope
