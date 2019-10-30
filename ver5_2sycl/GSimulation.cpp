@@ -256,16 +256,19 @@ void GSimulation :: start()
         particles_mass_d.push_back(buffer<real_type, 1>(particles_mass_d_host, id<1>(0), range<1>(n)));
       }
 
-      auto offsets_b = buffer<int, 1>(offsets, range<1>(num_devices));
-      auto shares_b = buffer<int, 1>(shares, range<1>(num_devices));
-
-      std::vector<int>total_threads(num_devices);
+      // Set up Max Total Threads
+      int* total_threads = new int(num_devices);
       for (int qi = 0; qi < q.size(); qi++)
       {
         auto num_groups = q[qi].get_device().get_info<info::device::max_compute_units>();
         auto work_group_size =q[qi].get_device().get_info<info::device::max_work_group_size>();
-        total_threads.push_back(num_groups * work_group_size);
+        total_threads[qi] = (int)(num_groups * work_group_size);
       }
+
+      auto total_threads_b = buffer<int, 1>(total_threads, range<1>(num_devices));
+      auto offsets_b = buffer<int, 1>(offsets, range<1>(num_devices));
+      auto shares_b = buffer<int, 1>(shares, range<1>(num_devices));
+
 
       for (int qi = 0; qi < q.size(); qi++)
         q[qi].submit([&] (handler& cgh)  {
@@ -282,6 +285,7 @@ void GSimulation :: start()
 
           auto offsets_ba = offsets_b.get_access<access::mode::read>(cgh);
           auto shares_ba = shares_b.get_access<access::mode::read>(cgh);
+          auto total_threads_ba = total_threads_b.get_access<access::mode::read>(cgh);
 
             //range<1>(total_threads[qi]), [=](item<1> item) {
             //for (int i = item.get_id()[0]; i < shares_ba[qi]; i+=item.get_range()[0]) // bad result
@@ -293,7 +297,7 @@ void GSimulation :: start()
             //for (int i = item.get_global_id()[0]; i < shares_ba[qi]; i+=item.get_nd_range().get_global_range()[0]) // bad result
           cgh.parallel_for<class update_accel>(
             nd_range<1>(total_threads[qi], 0, 0), [=](nd_item<1> item) {
-            for (int i = item.get_global_id()[0]; i < shares_ba[qi]; i+=total_threads[qi]) // bad result
+            for (int i = item.get_global_id()[0]; i < shares_ba[qi]; i+=total_threads_ba[qi]) // bad result
             {
               real_type ax_i = 0;
               real_type ay_i = 0;
