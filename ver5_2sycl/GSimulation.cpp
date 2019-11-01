@@ -260,9 +260,16 @@ void GSimulation :: start()
       int* total_threads = new int(num_devices);
       for (int qi = 0; qi < q.size(); qi++)
       {
-        auto num_groups = q[qi].get_device().get_info<info::device::max_compute_units>();
-        auto work_group_size =q[qi].get_device().get_info<info::device::max_work_group_size>();
-        total_threads[qi] = (int)(num_groups * work_group_size);
+        if (q[qi].get_device().get_info<info::device::device_type>() == info::device_type::gpu)
+        {
+          auto num_groups = q[qi].get_device().get_info<info::device::max_compute_units>();
+          auto work_group_size =q[qi].get_device().get_info<info::device::max_work_group_size>();
+          total_threads[qi] = (int)(num_groups * work_group_size);
+        }
+        else 
+        {
+          total_threads[qi] = 32;
+        }
       }
 
       auto total_threads_b = buffer<int, 1>(total_threads, range<1>(num_devices));
