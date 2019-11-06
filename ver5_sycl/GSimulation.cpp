@@ -99,34 +99,18 @@ void GSimulation :: init_mass()
 void GSimulation :: start() 
 {
 
-  // Create a queue vector. We'll cycle through platforms/devices 
-  // CPU and GPU separately to avoid SYCL_host platform
-  std::vector<queue> queues;
-  // cycle through all OpenCL platforms
-  std::vector<platform> platforms = platform().get_platforms();
-  for (auto &plat : platforms) {
-    //cycle through GPUs
-    for (auto &dev : plat.get_devices(info::device_type::gpu))
-      queues.insert(queues.begin(), queue(dev));
-    //cycle through CPUs
-    for (auto &dev : plat.get_devices(info::device_type::cpu))
-      queues.insert(queues.begin(), queue(dev));
-  }
-
-  for (auto &q : queues)
-      std::cout << q.get_device().get_info<info::device::name>() << std::endl;
-
-  queue q; // = queue(cpu_selector{});
+  queue q = queue(gpu_selector{});
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
   int i;
 
-  float ratio = get_workshare();
-  int n_share[2] = {int(n * ratio), n - int(n * ratio)};
-  int n_offset[2] = {0, n_share[0]};
-  std::cout << n_share[0] << std::endl;
-  std::cout << n_share[1] << std::endl;
+  // Set up Max Total Threads
+  auto num_groups = q.get_device().get_info<info::device::max_compute_units>();
+  auto work_group_size =q.get_device().get_info<info::device::max_work_group_size>();
+  auto total_threads = (int)(num_groups * work_group_size);
+
+
 //  int n_share[2] = {n, 0};
 //  int n_offset[2] = {0, n-n_share[0]};
  
@@ -188,8 +172,6 @@ void GSimulation :: start()
   buffer<real_type, 1> particles_mass_d(particles->mass, range<1>(n));
 
 
-  for (int i = 0; i < queues.size(); i++) {
-    q = queues[i];
     q.submit([&] (handler& cgh)  {
        auto particles_acc_x = particles_acc_x_d.get_access<access::mode::read_write>(cgh);
        auto particles_acc_y = particles_acc_y_d.get_access<access::mode::read_write>(cgh);
@@ -207,73 +189,36 @@ void GSimulation :: start()
 
 
        cgh.parallel_for<class update_accel>(
-         range<1>(range<1>(n_share[i])), id<1>(n_offset[i]), [=](item<1> item) {
-         auto i = item.get_linear_id();
+       nd_range<1>(total_threads, 0, 0), [=](nd_item<1> item) {  // good
+       for (int i = item.get_global_id()[0]; i < n; i+=total_threads)
+       {
+         real_type ax_i = particles_acc_x[i];
+         real_type ay_i = particles_acc_y[i];
+         real_type az_i = particles_acc_z[i];
 
-     real_type ax_i = particles_acc_x[i];
-     real_type ay_i = particles_acc_y[i];
-     real_type az_i = particles_acc_z[i];
-
-     for (int j = 0; j < n; j++)
-     {
-       real_type dx, dy, dz;
-	     real_type distanceSqr = 0.0f;
-	     real_type distanceInv = 0.0f;
-	        
-	     dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
-	     dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
-	     dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
+         for (int j = 0; j < n; j++)
+         {
+           real_type dx, dy, dz;
+	         real_type distanceSqr = 0.0f;
+	         real_type distanceInv = 0.0f;
+	            
+	         dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
+	         dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
+	         dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
 	
- 	     distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	     distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+ 	         distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+ 	         distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
-	     ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	     ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-	     az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-     }
-     particles_acc_x[i] = ax_i;
-     particles_acc_y[i] = ay_i;
-     particles_acc_z[i] = az_i;
-
+	         ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	         ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+	         az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+         }
+         particles_acc_x[i] = ax_i;
+         particles_acc_y[i] = ay_i;
+         particles_acc_z[i] = az_i;
+       }
          }); // end of parallel for scope
        }); // end of command group scope
-  }
-
-//  for (int i = 0; i < queues.size(); i++) {
-//    q = queues[i];
-//    q.submit([&] (handler& cgh)  {
-//       auto particles_acc_x = particles_acc_x_d.get_access<access::mode::write>(cgh);
-//       auto particles_acc_y = particles_acc_y_d.get_access<access::mode::write>(cgh);
-//       auto particles_acc_z = particles_acc_z_d.get_access<access::mode::write>(cgh);
-//
-//       auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read_write>(cgh);
-//       auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read_write>(cgh);
-//       auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read_write>(cgh);
-//
-//       auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read_write>(cgh);
-//       auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read_write>(cgh);
-//       auto particles_pos_z = particles_pos_z_d.get_access<access::mode::read_write>(cgh);
-//
-//
-//       cgh.parallel_for<class update_energy>(
-//         nd_range<1>(range<1>(n_share[i]), range<1>(), range<1>(n_offset[i])), [=](nd_item<1> item) {
-//         auto i = item.get_global_id(0);
-//
-//     particles_vel_x[i] += particles_acc_x[i] * dt; //2flops
-//     particles_vel_y[i] += particles_acc_y[i] * dt; //2flops
-//     particles_vel_z[i] += particles_acc_z[i] * dt; //2flops
-//	  
-//     particles_pos_x[i] += particles_vel_x[i] * dt; //2flops
-//     particles_pos_y[i] += particles_vel_y[i] * dt; //2flops
-//     particles_pos_z[i] += particles_vel_z[i] * dt; //2flops
-//
-//
-//         particles_acc_x[i] = 0.;
-//         particles_acc_y[i] = 0.;
-//         particles_acc_z[i] = 0.;
-//         });
-//       }); 
-//   } // end of queues
    } // end of buffer scope
 
    energy = 0;
