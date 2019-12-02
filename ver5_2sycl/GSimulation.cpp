@@ -213,11 +213,12 @@ void GSimulation :: start()
   for (int s=1; s<=get_nsteps(); ++s)
   { // time step loop
     ts0 += time.start(); 
-    shares[0] = n * cpu_ratio;
+    shares[0] = n * cpu_ratio < 64 ? 64 : n * cpu_ratio;
+    shares[0] = shares[0] - shares[0] % 64;
     offsets[0] = 0;
     for (int i = 1; i < num_devices; i++) {
-      shares[i] = n - n * cpu_ratio;
-      offsets[i] = n * cpu_ratio;
+      shares[i] = n - shares[0];
+      offsets[i] = shares[0];
     }
 
     { // buffer scope
