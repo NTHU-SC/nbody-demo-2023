@@ -157,6 +157,19 @@ void GSimulation :: start()
 
   // Copy data to views from host
   for (int i = 0; i < n; i++) {
+    pos_x_d(i) = particles->pos_x[i];
+    pos_y_d(i) = particles->pos_y[i];
+    pos_z_d(i) = particles->pos_z[i];
+
+    vel_x_d(i) = particles->vel_x[i];
+    vel_y_d(i) = particles->vel_y[i];
+    vel_z_d(i) = particles->vel_z[i];
+
+    acc_x_d(i) = particles->acc_x[i];
+    acc_y_d(i) = particles->acc_y[i];
+    acc_z_d(i) = particles->acc_z[i];
+
+    mass_h(i) = particles->mass[i];
 
   }
   
