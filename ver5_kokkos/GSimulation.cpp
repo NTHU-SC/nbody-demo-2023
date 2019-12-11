@@ -135,7 +135,21 @@ void GSimulation :: start()
   floatView acc_z_d("acc_z", n);
 
   floatView mass_d("mass", n);
+
+  // Create host mirrors
+  auto pos_x_h = Kokkos::create_mirror_view(pos_x_d);
+  auto pos_y_h = Kokkos::create_mirror_view(pos_y_d);
+  auto pos_z_h = Kokkos::create_mirror_view(pos_z_d);
+
+  auto vel_x_h = Kokkos::create_mirror_view(vel_x_d);
+  auto vel_y_h = Kokkos::create_mirror_view(vel_y_d);
+  auto vel_z_h = Kokkos::create_mirror_view(vel_z_d);
+
+  auto acc_x_h = Kokkos::create_mirror_view(acc_x_d);
+  auto acc_y_h = Kokkos::create_mirror_view(acc_y_d);
+  auto acc_z_h = Kokkos::create_mirror_view(acc_z_d);
  
+  auto mass_h = Kokkos::create_mirror_view(mass_d);
   init_pos();	
   init_vel();
   init_acc();
@@ -143,6 +157,7 @@ void GSimulation :: start()
 
   // Copy data to views from host
   for (int i = 0; i < n; i++) {
+
   }
   
   print_header();
