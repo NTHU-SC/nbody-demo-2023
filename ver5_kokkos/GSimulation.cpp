@@ -172,6 +172,20 @@ void GSimulation :: start()
     mass_h(i) = particles->mass[i];
 
   }
+
+  Kokkos::deep_copy(pos_x_d, pos_x_h);
+  Kokkos::deep_copy(pos_y_d, pos_y_h);
+  Kokkos::deep_copy(pos_z_d, pos_z_h);
+
+  Kokkos::deep_copy(vel_x_d, vel_x_h);
+  Kokkos::deep_copy(vel_y_d, vel_y_h);
+  Kokkos::deep_copy(vel_z_d, vel_z_h);
+
+  Kokkos::deep_copy(acc_x_d, acc_x_h);
+  Kokkos::deep_copy(acc_y_d, acc_y_h);
+  Kokkos::deep_copy(acc_z_d, acc_z_h);
+
+  Kokkos::deep_copy(mass_d, mass_h);
   
   print_header();
   
