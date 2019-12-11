@@ -97,6 +97,9 @@ void GSimulation :: init_mass()
 void GSimulation :: start() 
 {
   Kokkos::initialize();
+  typedef typename Kokkos::HostSpace hostmem;
+  //Kokkos::View<float*, Kokkos::LayoutLeft, hostmem> floatView;
+  typedef Kokkos::View<float*> floatView;
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
@@ -104,6 +107,8 @@ void GSimulation :: start()
  
   const int alignment = 32;
   particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
+  Kokkos::View<ParticleSoA*> particles_view_d("particles", n);
+  Kokkos::View<ParticleSoA*>::HostMirror particles_view_h = Kokkos::create_mirror_view(particles_view_d);
 
   particles->pos_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
   particles->pos_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
@@ -114,12 +119,31 @@ void GSimulation :: start()
   particles->acc_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
   particles->acc_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
   particles->acc_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->mass  = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
+  particles->mass  = (real_type*) _mm_malloc(n*sizeof(real_type),alignment); 
+
+  // Create views for data
+  floatView pos_x_d("pos_x", n);
+  floatView pos_y_d("pos_y", n);
+  floatView pos_z_d("pos_z", n);
+
+  floatView vel_x_d("vel_x", n);
+  floatView vel_y_d("vel_y", n);
+  floatView vel_z_d("vel_z", n);
+
+  floatView acc_x_d("acc_x", n);
+  floatView acc_y_d("acc_y", n);
+  floatView acc_z_d("acc_z", n);
+
+  floatView mass_d("mass", n);
  
   init_pos();	
   init_vel();
   init_acc();
   init_mass();
+
+  // Copy data to views from host
+  for (int i = 0; i < n; i++) {
+  }
   
   print_header();
   
