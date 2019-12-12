@@ -1,10 +1,21 @@
-CXX = nvcc
-COMPFLAGS = -g -std=c++11 -O2 -DASALIGN  -L/home/pvelesko/local/tarballs/kokkos/build_cuda_sm60/install/lib -lkokkos -ccbin icpc
-OPTFLAGS = -xhost -qopenmp
+ifeq ($(ARCH),cuda)
+	#$(info) "Using NVCC Compiler with icpc backend"
+	CXX = nvcc
+	OPTFLAGS = -xhost -qopenmp # compiler specific
+	CXXFLAGS = -ccbin icpc -Xcompiler "$(OPTFLAGS)"
+	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
+else
+	#$(info) "Using Intel Compiler CPU"
+	CXX=icpc	
+	OPTFLAGS = -xhost -qopenmp # compiler specific
+	CXXFLAGS = $(OPTFLAGS)
+	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
+endif
 
-INCLUDES = -I/home/pvelesko/local/tarballs/kokkos/build_cuda_sm60/install/include
+INCLUDES = -I$(KOKKOS_DIR)/include
+LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
 
-CXXFLAGS = -Xcompiler "$(OPTFLAGS)" $(COMPFLAGS) $(REPFLAGS) $(OMPFLAGS) 
+COMPFLAGS = -g -std=c++11 -O2 -DASALIGN 
 
 SOURCES = GSimulation.cpp main.cpp
 
@@ -21,12 +32,12 @@ all: cpu
 %.o: %.cpp
 	$(info )
 	$(info Compiling the object file for CPU: )
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ 
+	$(CXX) $(CXXFLAGS) $(COMPFLAGS) $(INCLUDES) -c $< -o $@ 
 
 cpu: $(OBJSC)
 	$(info )
 	$(info Linking the CPU executable:)
-	$(CXX) -Xcompiler "$(OPTFLAGS)" $(INCLUDES) -o $(EXEC) $(OBJSC) $(COMPFLAGS)
+	$(CXX) $(CXXFLAGS) $(COMPFLAGS) $(INCLUDES) -o $(EXEC) $(OBJSC) $(LIBS)
 	
 run: 
 	$(info )
