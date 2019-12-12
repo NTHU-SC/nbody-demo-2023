@@ -1,23 +1,22 @@
-ifeq ($(ARCH),cuda)
-	#$(info) "Using NVCC Compiler with icpc backend"
+ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
-	OPTFLAGS = -qopenmp --expt-extended-lambda # compiler specific
+	OPTFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS_CUDA# compiler specific
 	CXXFLAGS = $(OPTFLAGS)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
+	INCLUDES = -I$(KOKKOS_DIR)/include
+	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
+	SOURCES = GSimulation.cpp main.cpp
 else
-	#$(info) "Using Intel Compiler CPU"
 	CXX=icpc	
 	OPTFLAGS = -xhost -qopenmp # compiler specific
 	CXXFLAGS = $(OPTFLAGS)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
+	SOURCES = GSimulation.cpp main.cpp
 endif
 
-INCLUDES = -I$(KOKKOS_DIR)/include
-LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
 
 COMPFLAGS = -g -std=c++11 -O2 -DASALIGN 
 
-SOURCES = GSimulation.cpp main.cpp
 
 .SUFFIXES: .o .cpp
 
