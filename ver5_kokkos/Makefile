@@ -5,6 +5,7 @@ ifeq ($(ARCH),kokkos)
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
 	SOURCES = ./programming_models/kokkos/*.cpp 
+
 else ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
 	export NVCC_WRAPPER_DEFAULT_COMPILER=icpc
@@ -13,6 +14,14 @@ else ifeq ($(ARCH),kokkos_cuda)
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
 	SOURCES = ./programming_models/kokkos/*.cpp 
+
+else ifeq ($(ARCH),openmptarget_icx)
+	CXX = icpx
+	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ # compiler specific
+	INCLUDES = -I./
+	LIBS = 
+	SOURCES = ./programming_models/openmp/*.cpp 
+
 else
 	CXX=icpc	
 	CXXFLAGS = -xhost -qopenmp # compiler specific
