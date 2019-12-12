@@ -1,8 +1,8 @@
 ifeq ($(ARCH),cuda)
 	#$(info) "Using NVCC Compiler with icpc backend"
-	CXX = nvcc
-	OPTFLAGS = -xhost -qopenmp # compiler specific
-	CXXFLAGS = -ccbin icpc -Xcompiler "$(OPTFLAGS)"
+	CXX = nvcc_wrapper
+	OPTFLAGS = -qopenmp # compiler specific
+	CXXFLAGS = $(OPTFLAGS)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
 else
 	#$(info) "Using Intel Compiler CPU"
