@@ -1,7 +1,7 @@
 ifeq ($(ARCH),cuda)
 	#$(info) "Using NVCC Compiler with icpc backend"
 	CXX = nvcc_wrapper
-	OPTFLAGS = -qopenmp # compiler specific
+	OPTFLAGS = -qopenmp --expt-extended-lambda # compiler specific
 	CXXFLAGS = $(OPTFLAGS)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
 else
