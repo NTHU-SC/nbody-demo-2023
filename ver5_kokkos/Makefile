@@ -1,11 +1,10 @@
-CXX = icpc
-COMPFLAGS = -g -std=c++11 -O2 -DASALIGN  -L/home/pvelesko/local/tarballs/kokkos/build_latest/install/lib -lkokkos
-OPTFLAGS = -xhost
-OMPFLAGS = -qopenmp
-#REPFLAGS = -qopt-report=5 -qopt-report-filter="GSimulation.cpp,130-220" 
-INCLUDES = -I/home/pvelesko/local/tarballs/kokkos/build_latest/install/include
+CXX = nvcc
+COMPFLAGS = -g -std=c++11 -O2 -DASALIGN  -L/home/pvelesko/local/tarballs/kokkos/build_cuda_sm60/install/lib -lkokkos -ccbin icpc
+OPTFLAGS = -xhost -qopenmp
 
-CXXFLAGS = $(COMPFLAGS) $(OPTFLAGS) $(REPFLAGS) $(OMPFLAGS) 
+INCLUDES = -I/home/pvelesko/local/tarballs/kokkos/build_cuda_sm60/install/include
+
+CXXFLAGS = -Xcompiler "$(OPTFLAGS)" $(COMPFLAGS) $(REPFLAGS) $(OMPFLAGS) 
 
 SOURCES = GSimulation.cpp main.cpp
 
@@ -27,7 +26,7 @@ all: cpu
 cpu: $(OBJSC)
 	$(info )
 	$(info Linking the CPU executable:)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(EXEC) $(OBJSC) $(COMPFLAGS)
+	$(CXX) -Xcompiler "$(OPTFLAGS)" $(INCLUDES) -o $(EXEC) $(OBJSC) $(COMPFLAGS)
 	
 run: 
 	$(info )
