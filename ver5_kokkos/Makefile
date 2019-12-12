@@ -1,11 +1,19 @@
+ifeq ($(ARCH),kokkos)
+	CXX = icpc
+	CXXFLAGS = -qopenmp -DKOKKOS# compiler specific
+	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
+	INCLUDES = -I$(KOKKOS_DIR)/include -I./
+	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
+	SOURCES = ./programming_models/kokkos/*.cpp 
+else
 ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
 	export NVCC_WRAPPER_DEFAULT_COMPILER=icpc
-	CXXFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS_CUDA# compiler specific
+	CXXFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS -DKOKKOS_CUDA# compiler specific
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
-	SOURCES = ./programming_models/kokkos/cuda/*.cpp 
+	SOURCES = ./programming_models/kokkos/*.cpp 
 else
 	CXX=icpc	
 	CXXFLAGS = -xhost -qopenmp # compiler specific
