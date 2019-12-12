@@ -61,7 +61,6 @@ private:
   typedef Kokkos::LayoutLeft layout;
 
   typedef Kokkos::View<real_type*, layout, mspace> VecView;
-
 #endif
   /*--------------------------- KOKKOS ---------------------*/
 
