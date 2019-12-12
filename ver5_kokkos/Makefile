@@ -5,7 +5,7 @@ ifeq ($(ARCH),kokkos)
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
 	SOURCES = ./programming_models/kokkos/*.cpp 
-else ($(ARCH),kokkos_cuda)
+else ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
 	export NVCC_WRAPPER_DEFAULT_COMPILER=icpc
 	CXXFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS -DKOKKOS_CUDA# compiler specific
@@ -34,12 +34,20 @@ EXEC=nbody.x
 
 all: cpu
 
+check_arch:
+ifndef ARCH
+	$(info ) 
+	$(info please set ARCH env var: )
+	$(info kokkos, kokkos_cuda, openmp )
+	$(error copmilation aborted.)
+endif
+
 %.o: %.cpp
 	$(info )
 	$(info Compiling the object file for CPU: )
 	$(CXX) $(CXXFLAGS) $(COMPFLAGS) $(INCLUDES) -c $< -o $@ 
 
-cpu: $(OBJSC)
+cpu: check_arch $(OBJSC)
 	$(info )
 	$(info Linking the CPU executable:)
 	$(CXX) $(CXXFLAGS) $(COMPFLAGS) $(INCLUDES) -o $(EXEC) $(OBJSC) $(LIBS)
