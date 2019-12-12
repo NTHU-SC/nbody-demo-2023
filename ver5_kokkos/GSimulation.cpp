@@ -104,7 +104,6 @@ void GSimulation :: start()
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
-  int i,j;
  
   const int alignment = 32;
   particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
@@ -296,7 +295,7 @@ void GSimulation :: start()
 
    energy = 0;
 
-   for (i = 0; i < n; ++i)// update position
+   for (int i = 0; i < n; ++i)// update position
    {
      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
      particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
