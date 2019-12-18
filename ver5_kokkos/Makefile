@@ -2,7 +2,7 @@ ifeq ($(ARCH),kokkos)
 	CXX = icpc
 	CXXFLAGS = -qopenmp -DKOKKOS# compiler specific
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
-	INCLUDES = -I$(KOKKOS_DIR)/include -I./
+	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
 	SOURCES = ./programming_models/kokkos/GSimulation.cpp 
 
@@ -11,21 +11,21 @@ else ifeq ($(ARCH),kokkos_cuda)
 	export NVCC_WRAPPER_DEFAULT_COMPILER=icpc
 	CXXFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS -DKOKKOS_CUDA# compiler specific
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
-	INCLUDES = -I$(KOKKOS_DIR)/include -I./
+	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
 	SOURCES = ./programming_models/kokkos/GSimulation.cpp 
 
 else ifeq ($(ARCH),openmptarget_icx)
 	CXX = icpx
 	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ # compiler specific
-	INCLUDES = -I./
+	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
-	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 # compiler specific
-	INCLUDES = -I./
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 -ffast-math -Wdeprecated # compiler specific
+	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
@@ -33,7 +33,9 @@ else ifeq ($(ARCH),cpu)
 	CXX=icpc	
 	CXXFLAGS = -xhost -qopenmp # compiler specific
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
+	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = GSimulation.cpp main.cpp
+	SOURCES = ./programming_models/cpu/GSimulation.cpp  
 endif
 
 
