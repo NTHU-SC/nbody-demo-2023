@@ -4,7 +4,7 @@ ifeq ($(ARCH),kokkos)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
-	SOURCES = ./programming_models/kokkos/*.cpp 
+	SOURCES = ./programming_models/kokkos/GSimulation.cpp 
 
 else ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
@@ -13,16 +13,23 @@ else ifeq ($(ARCH),kokkos_cuda)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
-	SOURCES = ./programming_models/kokkos/*.cpp 
+	SOURCES = ./programming_models/kokkos/GSimulation.cpp 
 
 else ifeq ($(ARCH),openmptarget_icx)
 	CXX = icpx
 	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ # compiler specific
 	INCLUDES = -I./
 	LIBS = 
-	SOURCES = ./programming_models/openmp/*.cpp 
+	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
-else
+else ifeq ($(ARCH),openmptarget_clang-ykt)
+	CXX = clang++
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 # compiler specific
+	INCLUDES = -I./
+	LIBS = 
+	SOURCES = ./programming_models/openmp/GSimulation.cpp 
+
+else ifeq ($(ARCH),cpu)
 	CXX=icpc	
 	CXXFLAGS = -xhost -qopenmp # compiler specific
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
@@ -47,14 +54,14 @@ check_arch:
 ifndef ARCH
 	$(info ) 
 	$(info please set ARCH env var: )
-	$(info kokkos, kokkos_cuda, openmp )
+	$(info cpu, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt)
 	$(error copmilation aborted.)
 endif
 
 %.o: %.cpp
 	$(info )
 	$(info Compiling the object file for CPU: )
-	$(CXX) $(CXXFLAGS) $(COMPFLAGS) $(INCLUDES) -c $< -o $@ 
+	$(CXX) $(CXXFLAGS) $(COMPFLAGS) $(INCLUDES) -c $< -o $@
 
 cpu: check_arch $(OBJSC)
 	$(info )
