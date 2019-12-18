@@ -24,7 +24,7 @@ else ifeq ($(ARCH),openmptarget_icx)
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
-	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 -ffast-math -Wdeprecated # compiler specific
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -ffast-math -Wdeprecated # compiler specific
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
