@@ -20,7 +20,6 @@
 
 #ifndef _PARTICLE_HPP
 #define _PARTICLE_HPP
-#include <cmath>
 #include "types.hpp"
 
 struct Particle

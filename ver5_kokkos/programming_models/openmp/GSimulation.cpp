@@ -20,7 +20,8 @@
 
 #include "GSimulation.hpp"
 #include "cpu_time.hpp"
-
+#define sqrt
+#define sqrtf 
 GSimulation :: GSimulation()
 {
   std::cout << "===============================" << std::endl;
@@ -43,29 +44,29 @@ void GSimulation :: set_number_of_steps(int N)
 
 void GSimulation :: init_pos()
 {
-  std::random_device rd;        //random number generator
-  std::mt19937 gen(42);
-  std::uniform_real_distribution<real_type> unif_d(0,1.0);
-
+//  std::random_device rd;        //random number generator
+//  std::mt19937 gen(42);
+//  std::uniform_real_distribution<real_type> unif_d(0,1.0);
+    srand(123);
   for(int i=0; i<get_npart(); ++i)
   {
-    particles_pos_x[i] = unif_d(gen);
-    particles_pos_y[i] = unif_d(gen);
-    particles_pos_z[i] = unif_d(gen);
+//    particles_pos_x[i] = unif_d(gen);
+//    particles_pos_y[i] = unif_d(gen);
+//    particles_pos_z[i] = unif_d(gen);
   }
 }
 
 void GSimulation :: init_vel()
 {
-  std::random_device rd;        //random number generator
-  std::mt19937 gen(42);
-  std::uniform_real_distribution<real_type> unif_d(-1.0,1.0);
+//  std::random_device rd;        //random number generator
+//  std::mt19937 gen(42);
+//  std::uniform_real_distribution<real_type> unif_d(-1.0,1.0);
 
   for(int i=0; i<get_npart(); ++i)
   {
-    particles_vel_x[i] = unif_d(gen) * 1.0e-3f;
-    particles_vel_y[i] = unif_d(gen) * 1.0e-3f;
-    particles_vel_z[i] = unif_d(gen) * 1.0e-3f;
+//    particles_vel_x[i] = unif_d(gen) * 1.0e-3f;
+//    particles_vel_y[i] = unif_d(gen) * 1.0e-3f;
+//    particles_vel_z[i] = unif_d(gen) * 1.0e-3f;
   }
 }
 
@@ -82,13 +83,13 @@ void GSimulation :: init_acc()
 void GSimulation :: init_mass()
 {
   real_type n   = static_cast<real_type> (get_npart());
-  std::random_device rd;        //random number generator
-  std::mt19937 gen(42);
-  std::uniform_real_distribution<real_type> unif_d(0.0,1.0);
+//  std::random_device rd;        //random number generator
+//  std::mt19937 gen(42);
+//  std::uniform_real_distribution<real_type> unif_d(0.0,1.0);
 
   for(int i=0; i<get_npart(); ++i)
   {
-    particles_mass[i] = n * unif_d(gen);
+//    particles_mass[i] = n * unif_d(gen);
   }
 }
 
