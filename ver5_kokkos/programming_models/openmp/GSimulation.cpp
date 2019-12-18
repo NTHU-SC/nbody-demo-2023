@@ -20,7 +20,7 @@
 
 #include "GSimulation.hpp"
 #include "cpu_time.hpp"
-#define unif_d(gen) static_cast<real_type> (rand() / RAND_MAX)
+#define unif_d(gen) static_cast<real_type> (rand()) / static_cast<real_type> (RAND_MAX)
 #define sqrt
 #define sqrtf 
 GSimulation :: GSimulation()
