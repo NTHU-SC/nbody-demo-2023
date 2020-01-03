@@ -36,17 +36,22 @@ else ifeq ($(ARCH),openmptarget_xl)
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
+else ifeq ($(ARCH),opencl)
+	CXX=icpc
+	CXXFLAGS = -lOpenCL
+	INCLUDES = -I./programming_models/opencl -I./
+	SOURCES = ./programming_models/opencl/GSimulation.cpp  
+
 else ifeq ($(ARCH),cpu)
-	CXX=icpc	
+	CXX=icp
 	CXXFLAGS = -xhost -qopenmp # compiler specific
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
 	INCLUDES = -I./programming_models/cpu -I./
-	SOURCES = GSimulation.cpp main.cpp
 	SOURCES = ./programming_models/cpu/GSimulation.cpp  
 endif
 
 
-COMPFLAGS = -g -std=c++11 -O2 -DASALIGN 
+COMPFLAGS = -g -std=c++11 -O2 #-DASALIGN 
 SOURCES += main.cpp
 
 .SUFFIXES: .o .cpp
@@ -63,7 +68,7 @@ check_arch:
 ifndef ARCH
 	$(info ) 
 	$(info please set ARCH env var: )
-	$(info cpu, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt)
+	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt)
 	$(error copmilation aborted.)
 endif
 

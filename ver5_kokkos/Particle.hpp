@@ -45,10 +45,10 @@ struct ParticleSoA
     ParticleSoA() { init();}
     void init() 
     {
-      pos_x = NULL; pos_y = NULL; pos_z = NULL;
-      vel_x = NULL; vel_y = NULL; vel_z = NULL;
-      acc_x = NULL; acc_y = NULL; acc_z = NULL;
-      mass  = NULL;
+      pos_x = 0; pos_y = 0; pos_z = 0;
+      vel_x = 0; vel_y = 0; vel_z = 0;
+      acc_x = 0; acc_y = 0; acc_z = 0;
+      mass  = 0;
     }
     real_type *pos_x, *pos_y, *pos_z;
     real_type *vel_x, *vel_y, *vel_z;
