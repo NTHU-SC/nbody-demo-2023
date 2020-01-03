@@ -103,19 +103,19 @@ void GSimulation :: start()
   Kokkos::initialize(); 
   {
 
-  particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),alignment);
+  particles = (ParticleSoA*) aligned_alloc(alignment, sizeof(ParticleSoA));
   //auto particles_view_h = Kokkos::create_mirror_view(particles_view_d);
 
-  particles->pos_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->pos_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->pos_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->vel_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_x = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_y = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->acc_z = (real_type*) _mm_malloc(n*sizeof(real_type),alignment);
-  particles->mass  = (real_type*) _mm_malloc(n*sizeof(real_type),alignment); 
+  particles->pos_x = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->pos_y = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->pos_z = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->vel_x = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->vel_y = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->vel_z = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->acc_x = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->acc_y = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->acc_z = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->mass  = (real_type*) aligned_alloc(alignment, n*sizeof(real_type)); 
 
   // Create views for data
   VecView pos_x_d("pos_x", n);
@@ -375,16 +375,15 @@ void GSimulation :: print_header()
 
 GSimulation :: ~GSimulation()
 {
-  _mm_free(particles->pos_x);
-  _mm_free(particles->pos_y);
-  _mm_free(particles->pos_z);
-  _mm_free(particles->vel_x);
-  _mm_free(particles->vel_y);
-  _mm_free(particles->vel_z);
-  _mm_free(particles->acc_x);
-  _mm_free(particles->acc_y);
-  _mm_free(particles->acc_z);
-  _mm_free(particles->mass);
-  _mm_free(particles);
-
+  free(particles->pos_x);
+  free(particles->pos_y);
+  free(particles->pos_z);
+  free(particles->vel_x);
+  free(particles->vel_y);
+  free(particles->vel_z);
+  free(particles->acc_x);
+  free(particles->acc_y);
+  free(particles->acc_z);
+  free(particles->mass);
+  free(particles);
 }

@@ -112,18 +112,19 @@ void GSimulation :: start()
   int n = get_npart();
   int i,j;
  
-  particles = (ParticleSoA*) _mm_malloc(sizeof(ParticleSoA),ALIGNMENT);
+  const int alignment = 32;
+  particles = (ParticleSoA*) aligned_alloc(alignment, sizeof(ParticleSoA));
 
-  particles->pos_x = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->pos_y = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->pos_z = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->vel_x = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->vel_y = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->vel_z = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->acc_x = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->acc_y = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->acc_z = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
-  particles->mass  = (real_type*) _mm_malloc(n*sizeof(real_type),ALIGNMENT);
+  particles->pos_x = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->pos_y = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->pos_z = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->vel_x = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->vel_y = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->vel_z = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->acc_x = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->acc_y = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->acc_z = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
+  particles->mass  = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
  
 
 
@@ -464,16 +465,15 @@ void GSimulation :: print_header()
 
 GSimulation :: ~GSimulation()
 {
-  _mm_free(particles->pos_x);
-  _mm_free(particles->pos_y);
-  _mm_free(particles->pos_z);
-  _mm_free(particles->vel_x);
-  _mm_free(particles->vel_y);
-  _mm_free(particles->vel_z);
-  _mm_free(particles->acc_x);
-  _mm_free(particles->acc_y);
-  _mm_free(particles->acc_z);
-  _mm_free(particles->mass);
-  _mm_free(particles);
-
+  free(particles->pos_x);
+  free(particles->pos_y);
+  free(particles->pos_z);
+  free(particles->vel_x);
+  free(particles->vel_y);
+  free(particles->vel_z);
+  free(particles->acc_x);
+  free(particles->acc_y);
+  free(particles->acc_z);
+  free(particles->mass);
+  free(particles);
 }
