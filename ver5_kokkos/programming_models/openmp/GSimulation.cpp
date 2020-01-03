@@ -20,9 +20,10 @@
 
 #include "GSimulation.hpp"
 #include "cpu_time.hpp"
-#define unif_d(gen) static_cast<real_type> (rand()) / static_cast<real_type> (RAND_MAX)
+#include "myrand.hpp"
 #define sqrt
-#define sqrtf 
+#define sqrtf
+
 GSimulation :: GSimulation()
 {
   std::cout << "===============================" << std::endl;
@@ -45,23 +46,22 @@ void GSimulation :: set_number_of_steps(int N)
 
 void GSimulation :: init_pos()
 {
-  srand(123);
   for(int i=0; i<get_npart(); ++i)
   {
-    particles_pos_x[i] = unif_d(gen);
-    particles_pos_y[i] = unif_d(gen);
-    particles_pos_z[i] = unif_d(gen);
+    particles_pos_x[i] = unif_d();
+    particles_pos_y[i] = unif_d();
+    particles_pos_z[i] = unif_d();
   }
 }
 
 void GSimulation :: init_vel()
 {
-  srand(123);
+
   for(int i=0; i<get_npart(); ++i)
   {
-    particles_vel_x[i] = unif_d(gen) * 1.0e-3f;
-    particles_vel_y[i] = unif_d(gen) * 1.0e-3f;
-    particles_vel_z[i] = unif_d(gen) * 1.0e-3f;
+    particles_vel_x[i] = unif_d() * 1.0e-3f;
+    particles_vel_y[i] = unif_d() * 1.0e-3f;
+    particles_vel_z[i] = unif_d() * 1.0e-3f;
   }
 }
 
@@ -78,10 +78,9 @@ void GSimulation :: init_acc()
 void GSimulation :: init_mass()
 {
   real_type n   = static_cast<real_type> (get_npart());
-  srand(123);
   for(int i=0; i<get_npart(); ++i)
   {
-    particles_mass[i] = n * unif_d(gen);
+    particles_mass[i] = n * unif_d();
   }
 }
 
