@@ -29,6 +29,13 @@ else ifeq ($(ARCH),openmptarget_clang-ykt)
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
+else ifeq ($(ARCH),openmptarget_xl)
+	CXX = xlc++
+	CXXFLAGS = -qsmp=omp -qoffload
+	INCLUDES = -I./programming_models/openmp -I./
+	LIBS = 
+	SOURCES = ./programming_models/openmp/GSimulation.cpp 
+
 else ifeq ($(ARCH),cpu)
 	CXX=icpc	
 	CXXFLAGS = -xhost -qopenmp # compiler specific
