@@ -122,10 +122,6 @@ void GSimulation :: start()
   VecView pos_y_d("pos_y", n);
   VecView pos_z_d("pos_z", n);
 
-  VecView vel_x_d("vel_x", n);
-  VecView vel_y_d("vel_y", n);
-  VecView vel_z_d("vel_z", n);
-
   VecView acc_x_d("acc_x", n);
   VecView acc_y_d("acc_y", n);
   VecView acc_z_d("acc_z", n);
@@ -136,10 +132,6 @@ void GSimulation :: start()
   auto pos_x_h = Kokkos::create_mirror_view(pos_x_d);
   auto pos_y_h = Kokkos::create_mirror_view(pos_y_d);
   auto pos_z_h = Kokkos::create_mirror_view(pos_z_d);
-
-  auto vel_x_h = Kokkos::create_mirror_view(vel_x_d);
-  auto vel_y_h = Kokkos::create_mirror_view(vel_y_d);
-  auto vel_z_h = Kokkos::create_mirror_view(vel_z_d);
 
   auto acc_x_h = Kokkos::create_mirror_view(acc_x_d);
   auto acc_y_h = Kokkos::create_mirror_view(acc_y_d);
@@ -152,6 +144,8 @@ void GSimulation :: start()
   init_mass();
 
   // copy to device
+  for (int i = 0; i < n; i++)
+    mass_h(i) = particles->mass[i];
   Kokkos::deep_copy(mass_d, mass_h);
   
   print_header();
@@ -179,32 +173,12 @@ void GSimulation :: start()
       pos_x_h(i) = particles->pos_x[i];
       pos_y_h(i) = particles->pos_y[i];
       pos_z_h(i) = particles->pos_z[i];
-
-      vel_x_h(i) = particles->vel_x[i];
-      vel_y_h(i) = particles->vel_y[i];
-      vel_z_h(i) = particles->vel_z[i];
-
-      acc_x_h(i) = particles->acc_x[i];
-      acc_y_h(i) = particles->acc_y[i];
-      acc_z_h(i) = particles->acc_z[i];
-
-      mass_h(i) = particles->mass[i];
     }
   
     // copy to device
     Kokkos::deep_copy(pos_x_d, pos_x_h);
     Kokkos::deep_copy(pos_y_d, pos_y_h);
     Kokkos::deep_copy(pos_z_d, pos_z_h);
-
-    Kokkos::deep_copy(vel_x_d, vel_x_h);
-    Kokkos::deep_copy(vel_y_d, vel_y_h);
-    Kokkos::deep_copy(vel_z_d, vel_z_h);
-
-    Kokkos::deep_copy(acc_x_d, acc_x_h);
-    Kokkos::deep_copy(acc_y_d, acc_y_h);
-    Kokkos::deep_copy(acc_z_d, acc_z_h);
-
-    Kokkos::deep_copy(mass_d, mass_h);
 
     Kokkos::parallel_for(n, KOKKOS_LAMBDA (const int i) {
 #ifndef KOKKOS_CUDA
@@ -218,9 +192,9 @@ void GSimulation :: start()
       __assume_aligned(particles->mass, alignment);
 #endif
 #endif
-      real_type ax_i = acc_x_d[i];
-      real_type ay_i = acc_y_d[i];
-      real_type az_i = acc_z_d[i];
+      real_type ax_i = 0;
+      real_type ay_i = 0;
+      real_type az_i = 0;
 
       for (int j = 0; j < n; j++) {
         real_type dx, dy, dz;
@@ -244,32 +218,15 @@ void GSimulation :: start()
       acc_z_d[i] = az_i;
     } ); //end parallel for
 
-  Kokkos::deep_copy(pos_x_h, pos_x_d);
-  Kokkos::deep_copy(pos_y_h, pos_y_d);
-  Kokkos::deep_copy(pos_z_h, pos_z_d);
-
-  Kokkos::deep_copy(vel_x_h, vel_x_d);
-  Kokkos::deep_copy(vel_y_h, vel_y_d);
-  Kokkos::deep_copy(vel_z_h, vel_z_d);
-
-  Kokkos::deep_copy(acc_x_h, acc_x_d);
-  Kokkos::deep_copy(acc_y_h, acc_y_d);
-  Kokkos::deep_copy(acc_z_h, acc_z_d);
-
-  // Copy data to views from host
-  for (int i = 0; i < n; i++) {
-    particles->pos_x[i] = pos_x_h(i);
-    particles->pos_y[i] = pos_y_h(i);
-    particles->pos_z[i] = pos_z_h(i);
-
-    particles->vel_x[i] = vel_x_h(i);
-    particles->vel_y[i] = vel_y_h(i);
-    particles->vel_z[i] = vel_z_h(i);
-
-    particles->acc_x[i] = acc_x_h(i);
-    particles->acc_y[i] = acc_y_h(i);
-    particles->acc_z[i] = acc_z_h(i);
-  }
+    // Copy data to views from host
+    Kokkos::deep_copy(acc_x_h, acc_x_d);
+    Kokkos::deep_copy(acc_y_h, acc_y_d);
+    Kokkos::deep_copy(acc_z_h, acc_z_d);
+    for (int i = 0; i < n; i++) {
+      particles->acc_x[i] = acc_x_h(i);
+      particles->acc_y[i] = acc_y_h(i);
+      particles->acc_z[i] = acc_z_h(i);
+    }
 
     energy = 0;
 
