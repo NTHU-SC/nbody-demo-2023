@@ -157,10 +157,6 @@ void GSimulation :: start()
        __global real_type* restrict particles_pos_y, 
        __global real_type* restrict particles_pos_z, 
 
-       __global real_type* restrict particles_vel_x, 
-       __global real_type* restrict particles_vel_y, 
-       __global real_type* restrict particles_vel_z, 
-
        __global real_type* restrict particles_acc_x, 
        __global real_type* restrict particles_acc_y, 
        __global real_type* restrict particles_acc_z, 
@@ -252,10 +248,6 @@ void GSimulation :: start()
     cl::Buffer particles_pos_y_d[num_devices];
     cl::Buffer particles_pos_z_d[num_devices];
                                
-    cl::Buffer particles_vel_x_d[num_devices];
-    cl::Buffer particles_vel_y_d[num_devices];
-    cl::Buffer particles_vel_z_d[num_devices];
-                              
     cl::Buffer particles_acc_x_d[num_devices];
     cl::Buffer particles_acc_y_d[num_devices];
     cl::Buffer particles_acc_z_d[num_devices];
@@ -277,10 +269,6 @@ void GSimulation :: start()
         particles_pos_y_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
         particles_pos_z_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_WRITE_ONLY, sizeof(real_type)*n, NULL);
 
-        particles_vel_x_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
-        particles_vel_y_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
-        particles_vel_z_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_WRITE, sizeof(real_type)*n, NULL);
-
         particles_acc_x_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
         particles_acc_y_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
         particles_acc_z_d[i] = cl::Buffer(OpenCL.clcu[i].context, CL_MEM_READ_ONLY, sizeof(real_type)*n, NULL);
@@ -292,18 +280,14 @@ void GSimulation :: start()
         kernel[i].setArg(1, particles_pos_y_d[i]);
         kernel[i].setArg(2, particles_pos_z_d[i]);
 
-        kernel[i].setArg(3, particles_vel_x_d[i]);
-        kernel[i].setArg(4, particles_vel_y_d[i]);
-        kernel[i].setArg(5, particles_vel_z_d[i]);
+        kernel[i].setArg(3, particles_acc_x_d[i]);
+        kernel[i].setArg(4, particles_acc_y_d[i]);
+        kernel[i].setArg(5, particles_acc_z_d[i]);
 
-        kernel[i].setArg(6, particles_acc_x_d[i]);
-        kernel[i].setArg(7, particles_acc_y_d[i]);
-        kernel[i].setArg(8, particles_acc_z_d[i]);
+        kernel[i].setArg(6, particles_mass_d[i]);
 
-        kernel[i].setArg(9, particles_mass_d[i]);
-
-        kernel[i].setArg(10, dt);
-        kernel[i].setArg(11, n);
+        kernel[i].setArg(7, dt);
+        kernel[i].setArg(8, n);
 
 
     } catch (cl::Error &e) {
@@ -383,11 +367,6 @@ void GSimulation :: start()
      particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
      particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
 
-//     no need since ocl overwrites
-//     particles->acc_x[i] = 0.;
-//     particles->acc_y[i] = 0.;
-//     particles->acc_z[i] = 0.;
-	
      energy += particles->mass[i] * (
 	       particles->vel_x[i]*particles->vel_x[i] + 
                particles->vel_y[i]*particles->vel_y[i] +
