@@ -151,21 +151,8 @@ void GSimulation :: start()
   init_acc();
   init_mass();
 
-
-//  // copy to device
-//  Kokkos::deep_copy(pos_x_d, pos_x_h);
-//  Kokkos::deep_copy(pos_y_d, pos_y_h);
-//  Kokkos::deep_copy(pos_z_d, pos_z_h);
-//
-//  Kokkos::deep_copy(vel_x_d, vel_x_h);
-//  Kokkos::deep_copy(vel_y_d, vel_y_h);
-//  Kokkos::deep_copy(vel_z_d, vel_z_h);
-//
-//  Kokkos::deep_copy(acc_x_d, acc_x_h);
-//  Kokkos::deep_copy(acc_y_d, acc_y_h);
-//  Kokkos::deep_copy(acc_z_d, acc_z_h);
-//
-//  Kokkos::deep_copy(mass_d, mass_h);
+  // copy to device
+  Kokkos::deep_copy(mass_d, mass_h);
   
   print_header();
   
@@ -185,78 +172,77 @@ void GSimulation :: start()
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   {   
-   ts0 += time.start(); 
+    ts0 += time.start(); 
 
-  // Copy data to views from host
-  for (int i = 0; i < n; i++) {
-    pos_x_h(i) = particles->pos_x[i];
-    pos_y_h(i) = particles->pos_y[i];
-    pos_z_h(i) = particles->pos_z[i];
+    // Copy data to views from host
+    for (int i = 0; i < n; i++) {
+      pos_x_h(i) = particles->pos_x[i];
+      pos_y_h(i) = particles->pos_y[i];
+      pos_z_h(i) = particles->pos_z[i];
 
-    vel_x_h(i) = particles->vel_x[i];
-    vel_y_h(i) = particles->vel_y[i];
-    vel_z_h(i) = particles->vel_z[i];
+      vel_x_h(i) = particles->vel_x[i];
+      vel_y_h(i) = particles->vel_y[i];
+      vel_z_h(i) = particles->vel_z[i];
 
-    acc_x_h(i) = particles->acc_x[i];
-    acc_y_h(i) = particles->acc_y[i];
-    acc_z_h(i) = particles->acc_z[i];
+      acc_x_h(i) = particles->acc_x[i];
+      acc_y_h(i) = particles->acc_y[i];
+      acc_z_h(i) = particles->acc_z[i];
 
-    mass_h(i) = particles->mass[i];
-  }
+      mass_h(i) = particles->mass[i];
+    }
   
-  // copy to device
-  Kokkos::deep_copy(pos_x_d, pos_x_h);
-  Kokkos::deep_copy(pos_y_d, pos_y_h);
-  Kokkos::deep_copy(pos_z_d, pos_z_h);
+    // copy to device
+    Kokkos::deep_copy(pos_x_d, pos_x_h);
+    Kokkos::deep_copy(pos_y_d, pos_y_h);
+    Kokkos::deep_copy(pos_z_d, pos_z_h);
 
-  Kokkos::deep_copy(vel_x_d, vel_x_h);
-  Kokkos::deep_copy(vel_y_d, vel_y_h);
-  Kokkos::deep_copy(vel_z_d, vel_z_h);
+    Kokkos::deep_copy(vel_x_d, vel_x_h);
+    Kokkos::deep_copy(vel_y_d, vel_y_h);
+    Kokkos::deep_copy(vel_z_d, vel_z_h);
 
-  Kokkos::deep_copy(acc_x_d, acc_x_h);
-  Kokkos::deep_copy(acc_y_d, acc_y_h);
-  Kokkos::deep_copy(acc_z_d, acc_z_h);
+    Kokkos::deep_copy(acc_x_d, acc_x_h);
+    Kokkos::deep_copy(acc_y_d, acc_y_h);
+    Kokkos::deep_copy(acc_z_d, acc_z_h);
 
-  Kokkos::deep_copy(mass_d, mass_h);
+    Kokkos::deep_copy(mass_d, mass_h);
 
-   Kokkos::parallel_for(n, KOKKOS_LAMBDA (const int i)
-   //for (i = 0; i < n; i++)// update acceleration
-   {
-//#ifdef ASALIGN
-//     __assume_aligned(particles->pos_x, alignment);
-//     __assume_aligned(particles->pos_y, alignment);
-//     __assume_aligned(particles->pos_z, alignment);
-//     __assume_aligned(particles->acc_x, alignment);
-//     __assume_aligned(particles->acc_y, alignment);
-//     __assume_aligned(particles->acc_z, alignment);
-//     __assume_aligned(particles->mass, alignment);
-//#endif
-     real_type ax_i = acc_x_d[i];
-     real_type ay_i = acc_y_d[i];
-     real_type az_i = acc_z_d[i];
-//#pragma omp simd reduction(+:ax_i,ay_i,az_i)
-     for (int j = 0; j < n; j++)
-     {
-         real_type dx, dy, dz;
-	 real_type distanceSqr = 0.0f;
-	 real_type distanceInv = 0.0f;
-		  
-	 dx = pos_x_d[j] - pos_x_d[i];	//1flop
-	 dy = pos_y_d[j] - pos_y_d[i];	//1flop	
-	 dz = pos_z_d[j] - pos_z_d[i];	//1flop
-	
- 	 distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	 distanceInv = 1.0f / sqrtf(distanceSqr);			//1div+1sqrt
+    Kokkos::parallel_for(n, KOKKOS_LAMBDA (const int i) {
+#ifndef KOKKOS_CUDA
+#ifdef ASALIGN
+      __assume_aligned(particles->pos_x, alignment);
+      __assume_aligned(particles->pos_y, alignment);
+      __assume_aligned(particles->pos_z, alignment);
+      __assume_aligned(particles->acc_x, alignment);
+      __assume_aligned(particles->acc_y, alignment);
+      __assume_aligned(particles->acc_z, alignment);
+      __assume_aligned(particles->mass, alignment);
+#endif
+#endif
+      real_type ax_i = acc_x_d[i];
+      real_type ay_i = acc_y_d[i];
+      real_type az_i = acc_z_d[i];
 
-	 ax_i += dx * G * mass_d[j] * distanceInv * distanceInv * distanceInv; //6flops
-	 ay_i += dy * G * mass_d[j] * distanceInv * distanceInv * distanceInv; //6flops
-	 az_i += dz * G * mass_d[j] * distanceInv * distanceInv * distanceInv; //6flops
-     }
-     acc_x_d[i] = ax_i;
-     acc_y_d[i] = ay_i;
-     acc_z_d[i] = az_i;
-   } ); //end parallel for
+      for (int j = 0; j < n; j++) {
+        real_type dx, dy, dz;
+        real_type distanceSqr = 0.0f;
+        real_type distanceInv = 0.0f;
+           
+        dx = pos_x_d[j] - pos_x_d[i];	//1flop
+        dy = pos_y_d[j] - pos_y_d[i];	//1flop	
+        dz = pos_z_d[j] - pos_z_d[i];	//1flop
+        
+        distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
+        distanceInv = 1.0f / sqrtf(distanceSqr);			//1div+1sqrt
+        
+        ax_i += dx * G * mass_d[j] * distanceInv * distanceInv * distanceInv; //6flops
+        ay_i += dy * G * mass_d[j] * distanceInv * distanceInv * distanceInv; //6flops
+        az_i += dz * G * mass_d[j] * distanceInv * distanceInv * distanceInv; //6flops
+      }
 
+      acc_x_d[i] = ax_i;
+      acc_y_d[i] = ay_i;
+      acc_z_d[i] = az_i;
+    } ); //end parallel for
 
   Kokkos::deep_copy(pos_x_h, pos_x_d);
   Kokkos::deep_copy(pos_y_h, pos_y_d);
@@ -269,7 +255,6 @@ void GSimulation :: start()
   Kokkos::deep_copy(acc_x_h, acc_x_d);
   Kokkos::deep_copy(acc_y_h, acc_y_d);
   Kokkos::deep_copy(acc_z_h, acc_z_d);
-
 
   // Copy data to views from host
   for (int i = 0; i < n; i++) {
@@ -286,51 +271,47 @@ void GSimulation :: start()
     particles->acc_z[i] = acc_z_h(i);
   }
 
-   energy = 0;
+    energy = 0;
 
-   for (int i = 0; i < n; ++i)// update position
-   {
-     particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
-     particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
-     particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
-	  
-     particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
-     particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
-     particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
-
-     particles->acc_x[i] = 0.;
-     particles->acc_y[i] = 0.;
-     particles->acc_z[i] = 0.;
-	
-     energy += particles->mass[i] * (
-	       particles->vel_x[i]*particles->vel_x[i] + 
-               particles->vel_y[i]*particles->vel_y[i] +
-               particles->vel_z[i]*particles->vel_z[i]); //7flops
-   }
+    for (int i = 0; i < n; ++i) { // update position
+      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
+      particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
+      particles->vel_z[i] += particles->acc_z[i] * dt; //2flops
+ 	  
+      particles->pos_x[i] += particles->vel_x[i] * dt; //2flops
+      particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
+      particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
+ 
+      particles->acc_x[i] = 0.;
+      particles->acc_y[i] = 0.;
+      particles->acc_z[i] = 0.;
+ 	
+      energy += particles->mass[i] * (
+ 	       particles->vel_x[i]*particles->vel_x[i] + 
+                particles->vel_y[i]*particles->vel_y[i] +
+                particles->vel_z[i]*particles->vel_z[i]); //7flops
+    }
   
     _kenergy = 0.5 * energy; 
     
     ts1 += time.stop();
-    if(!(s%get_sfreq()) ) 
-    {
+    if(!(s%get_sfreq()) ) {
       nf += 1;      
       std::cout << " " 
-		<<  std::left << std::setw(8)  << s
-		<<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
-		<<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
-		<<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
-		<<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
-		<<  std::endl;
-      if(nf > 2) 
-      {
-	av  += gflops*get_sfreq()/(ts1 - ts0);
-	dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
+  		<<  std::left << std::setw(8)  << s
+  		<<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
+  		<<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
+  		<<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
+  		<<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
+  		<<  std::endl;
+      if(nf > 2) {
+        av  += gflops*get_sfreq()/(ts1 - ts0);
+        dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
       }
       
       ts0 = 0;
       ts1 = 0;
     }
-  
   } //end of the time step loop
   
   const double t1 = time.stop();
@@ -348,7 +329,7 @@ void GSimulation :: start()
   std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
   std::cout << "===============================" << std::endl;
 
-} // kokkos scope
+  } // kokkos scope
   Kokkos::finalize();
 }
 

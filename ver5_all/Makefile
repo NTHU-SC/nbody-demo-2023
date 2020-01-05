@@ -1,6 +1,6 @@
 ifeq ($(ARCH),kokkos)
 	CXX = icpc
-	CXXFLAGS = -qopenmp -DKOKKOS# compiler specific
+	CXXFLAGS = -qopenmp -DKOKKOS -DASALIGN # compiler specific
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
@@ -45,7 +45,6 @@ else ifeq ($(ARCH),opencl)
 else ifeq ($(ARCH),cpu)
 	CXX=icp
 	CXXFLAGS = -xhost -qopenmp # compiler specific
-	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/GSimulation.cpp  
 endif
