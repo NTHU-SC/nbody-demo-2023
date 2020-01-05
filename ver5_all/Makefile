@@ -43,14 +43,14 @@ else ifeq ($(ARCH),opencl)
 	SOURCES = ./programming_models/opencl/GSimulation.cpp  
 
 else ifeq ($(ARCH),cpu)
-	CXX=icp
-	CXXFLAGS = -xhost -qopenmp # compiler specific
+	CXX=icpc
+	CXXFLAGS = -xhost -qopenmp -DASALIGN # compiler specific
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/GSimulation.cpp  
 endif
 
 
-COMPFLAGS = -g -std=c++11 -O2 #-DASALIGN 
+COMPFLAGS = -g -std=c++11 -O2
 SOURCES += main.cpp
 
 .SUFFIXES: .o .cpp
