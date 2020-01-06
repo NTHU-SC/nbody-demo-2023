@@ -21,6 +21,10 @@
 #ifndef _GSIMULATION_HPP
 #define _GSIMULATION_HPP
 
+#include <iostream>
+#include <math.h>
+#include <iomanip>
+#include <random>
 
 #include "Particle.hpp"
 class GSimulation 
