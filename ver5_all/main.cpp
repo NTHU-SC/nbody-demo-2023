@@ -31,7 +31,7 @@ int main(int argc, char** argv)
       <cpu-wgsize> is optional and will default to 0 which will allow the runtime to select work group size.\n \
       <gpu-wgsize> is optional and will default to 0 which will allow the runtime to select work group size.\n \
       to test for correctness: ./nbody.x 2000 500 <cpu/gpu/cpu+gpu> \n \
-      last reported energy  level should be: \n \
+      last reported energy  level should be: ~571 \n \
       ");
   GSimulation sim;
   std::string a;
