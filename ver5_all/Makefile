@@ -40,7 +40,7 @@ else ifeq ($(ARCH),opencl)
 	CXX=icpc
 	CXXFLAGS = -lOpenCL
 	INCLUDES = -I./programming_models/opencl -I./
-	SOURCES = ./programming_models/opencl/GSimulation.cpp  
+	SOURCES = ./programming_models/opencl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel)
 	CXX=clang++

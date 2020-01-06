@@ -33,77 +33,6 @@
 #include "OCL.hpp"
 
 
-GSimulation :: GSimulation()
-{
-  std::cout << "===============================" << std::endl;
-  std::cout << " Initialize Gravity Simulation" << std::endl;
-  set_npart(2000); 
-  set_nsteps(500);
-  set_tstep(0.1); 
-  set_sfreq(50);
-}
-
-void GSimulation :: set_number_of_particles(int N)  
-{
-  set_npart(N);
-}
-
-void GSimulation :: set_number_of_steps(int N)  
-{
-  set_nsteps(N);
-}
-
-void GSimulation :: init_pos()
-{
-  std::random_device rd;        //random number generator
-  std::mt19937 gen(42);
-  std::uniform_real_distribution<real_type> unif_d(0,1.0);
-
-  for(int i=0; i<get_npart(); ++i)
-  {
-    particles->pos_x[i] = unif_d(gen);
-    particles->pos_y[i] = unif_d(gen);
-    particles->pos_z[i] = unif_d(gen);
-  }
-}
-
-void GSimulation :: init_vel()
-{
-  std::random_device rd;        //random number generator
-  std::mt19937 gen(42);
-  std::uniform_real_distribution<real_type> unif_d(-1.0,1.0);
-
-  for(int i=0; i<get_npart(); ++i)
-  {
-    particles->vel_x[i] = unif_d(gen) * 1.0e-3f;
-    particles->vel_y[i] = unif_d(gen) * 1.0e-3f;
-    particles->vel_z[i] = unif_d(gen) * 1.0e-3f;
-  }
-}
-
-void GSimulation :: init_acc()
-{
-  for(int i=0; i<get_npart(); ++i)
-  {
-    particles->acc_x[i] = 0.f;
-    particles->acc_y[i] = 0.f;
-    particles->acc_z[i] = 0.f;
-  }
-}
-
-void GSimulation :: init_mass()
-{
-  real_type n   = static_cast<real_type> (get_npart());
-  std::random_device rd;        //random number generator
-  std::mt19937 gen(42);
-  std::uniform_real_distribution<real_type> unif_d(0.0,1.0);
-
-  for(int i=0; i<get_npart(); ++i)
-  {
-    particles->mass[i] = n * unif_d(gen);
-  }
-}
-
 void GSimulation :: start() 
 {
   real_type energy;
@@ -205,7 +134,7 @@ void GSimulation :: start()
      * -1 for no tuning of work-split
      *  256 local size for all devices. Currently max of 2
      */
-    cl::NDRange local[2];
+    cl::NDRange local[num_devices];
     if (_cpu_wgsize != 0 and _gpu_wgsize != 0) {
       local[0] = cl::NDRange(_cpu_wgsize);
       local[1] = cl::NDRange(_gpu_wgsize);
@@ -307,11 +236,20 @@ void GSimulation :: start()
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
   {   
-    shares[0] = n * cpu_ratio;
-    offsets[0] = 0;
-    for (int i = 1; i < num_devices; i++) {
-      shares[i] = n - n * cpu_ratio;
-      offsets[i] = n * cpu_ratio;
+    if (num_devices < 3) {
+      shares[0] = n * cpu_ratio;
+      offsets[0] = 0;
+      for (int i = 1; i < num_devices; i++) {
+        shares[i] = n - n * cpu_ratio;
+        offsets[i] = n * cpu_ratio;
+      }
+    } 
+    else {
+      int fair_share = n / num_devices;
+      for (int i = 0; i < num_devices; i++) {
+        shares[i] = fair_share;
+        offsets[i] = fair_share * i;
+      }
     }
 
    ts0 += time.start(); 
@@ -414,39 +352,4 @@ void GSimulation :: start()
   std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
   std::cout << "===============================" << std::endl;
 
-}
-
-void GSimulation :: print_header()
-{
-	    
-  std::cout << " nPart = " << get_npart()  << "; " 
-	    << "nSteps = " << get_nsteps() << "; " 
-	    << "dt = "     << get_tstep()  << std::endl;
-	    
-  std::cout << "------------------------------------------------" << std::endl;
-  std::cout << " " 
-	    <<  std::left << std::setw(8)  << "s"
-	    <<  std::left << std::setw(8)  << "dt"
-	    <<  std::left << std::setw(12) << "kenergy"
-	    <<  std::left << std::setw(12) << "time (s)"
-	    <<  std::left << std::setw(12) << "GFlops"
-	    <<  std::endl;
-  std::cout << "------------------------------------------------" << std::endl;
-
-
-}
-
-GSimulation :: ~GSimulation()
-{
-  free(particles->pos_x);
-  free(particles->pos_y);
-  free(particles->pos_z);
-  free(particles->vel_x);
-  free(particles->vel_y);
-  free(particles->vel_z);
-  free(particles->acc_x);
-  free(particles->acc_y);
-  free(particles->acc_z);
-  free(particles->mass);
-  free(particles);
 }
