@@ -46,13 +46,13 @@ else ifeq ($(ARCH),sycl-intel)
 	CXX=clang++
 	CXXFLAGS = -std=c++11 -O2 -fsycl
 	INCLUDES = -I./programming_models/sycl -I./
-	SOURCES = ./programming_models/sycl/GSimulation.cpp  
+	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-codeplay)
 	CXX=compute++
 	CXXFLAGS = -std=c++11 -O2 -lComputeCpp -sycl-driver
 	INCLUDES = -I./programming_models/sycl -I./
-	SOURCES = ./programming_models/sycl/GSimulation.cpp  
+	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),cpu)
 	CXX=icpc
