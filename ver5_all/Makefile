@@ -20,21 +20,21 @@ else ifeq ($(ARCH),openmptarget_icx)
 	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
-	SOURCES = ./programming_models/openmp/GSimulation.cpp 
+	SOURCES = ./programming_models/openmp/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
 	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -ffast-math -Wdeprecated
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
-	SOURCES = ./programming_models/openmp/GSimulation.cpp 
+	SOURCES = ./programming_models/openmp/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_xl)
 	CXX = xlc++
 	CXXFLAGS = -qsmp=omp -qoffload
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
-	SOURCES = ./programming_models/openmp/GSimulation.cpp 
+	SOURCES = ./programming_models/openmp/Compute.cpp 
 
 else ifeq ($(ARCH),opencl)
 	CXX=icpc
