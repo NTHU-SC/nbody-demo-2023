@@ -98,7 +98,6 @@ void GSimulation :: init_mass()
 
 void GSimulation :: start() 
 {
-
   queue q = queue(gpu_selector{});
   real_type energy;
   real_type dt = get_tstep();

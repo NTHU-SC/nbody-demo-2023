@@ -104,7 +104,6 @@ void GSimulation :: init_mass()
   }
 }
 
-
 void GSimulation :: start() 
 {
   real_type energy;
@@ -125,8 +124,6 @@ void GSimulation :: start()
   particles->acc_y = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
   particles->acc_z = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
   particles->mass  = (real_type*) aligned_alloc(alignment, n*sizeof(real_type));
- 
-
 
   init_pos();	
   init_vel();
@@ -136,7 +133,6 @@ void GSimulation :: start()
   print_header();
   
   _totTime = 0.; 
- 
   
   CPUTime time;
   double ts0 = 0;
@@ -419,8 +415,6 @@ void GSimulation :: start()
   std::cout << "===============================" << std::endl;
 
 }
-
-
 
 void GSimulation :: print_header()
 {
