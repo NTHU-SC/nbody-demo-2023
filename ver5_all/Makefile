@@ -4,7 +4,7 @@ ifeq ($(ARCH),kokkos)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
-	SOURCES = ./programming_models/kokkos/GSimulation.cpp 
+	SOURCES = ./programming_models/kokkos/Compute.cpp 
 
 else ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
@@ -13,7 +13,7 @@ else ifeq ($(ARCH),kokkos_cuda)
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
-	SOURCES = ./programming_models/kokkos/GSimulation.cpp 
+	SOURCES = ./programming_models/kokkos/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_icx)
 	CXX = icpx
