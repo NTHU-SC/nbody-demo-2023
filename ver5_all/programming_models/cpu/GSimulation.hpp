@@ -17,22 +17,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#define ALIGNMENT 64
 #ifndef _GSIMULATION_HPP
 #define _GSIMULATION_HPP
 
-#include <random>
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <stdlib.h>
-
-#include <omp.h>
 
 #include "Particle.hpp"
-
 class GSimulation 
 {
 public:
@@ -43,6 +33,14 @@ public:
   void set_number_of_particles(int N);
   void set_number_of_steps(int N);
   void start();
+  void update(real_type dt);
+
+  inline void set_cpu_ratio(const float &cpu_ratio){ _cpu_ratio = cpu_ratio; }
+  inline void set_cpu_wgsize(const int &cpu_wgsize){ _cpu_wgsize = cpu_wgsize; }
+  inline void set_gpu_wgsize(const int &gpu_wgsize){ _gpu_wgsize = gpu_wgsize; }
+  inline int get_cpu_ratio() const {return _cpu_ratio; }
+  inline void set_devices(int N) { _devices = N;};
+  inline int get_devices() { return _devices;};
   
 private:
   ParticleSoA *particles;
@@ -57,11 +55,17 @@ private:
   
   double _totTime;		//total time of the simulation
   double _totFlops;		//total number of flops 
+
+  float _cpu_ratio = -1.0f;
+  int _cpu_wgsize = 0;
+  int _gpu_wgsize = 0;
+  int _devices = 0;
    
   void init_pos();	
   void init_vel();
   void init_acc();
   void init_mass();
+
     
   inline void set_npart(const int &N){ _npart = N; }
   inline int get_npart() const {return _npart; }
