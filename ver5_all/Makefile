@@ -1,6 +1,6 @@
 ifeq ($(ARCH),kokkos)
 	CXX = icpc
-	CXXFLAGS = -qopenmp -DKOKKOS -DASALIGN # compiler specific
+	CXXFLAGS = -qopenmp -DKOKKOS -DASALIGN -g
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
@@ -9,7 +9,7 @@ ifeq ($(ARCH),kokkos)
 else ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
 	export NVCC_WRAPPER_DEFAULT_COMPILER=icpc
-	CXXFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS -DKOKKOS_CUDA# compiler specific
+	CXXFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS -DKOKKOS_CUDA -g
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
 	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
@@ -17,40 +17,46 @@ else ifeq ($(ARCH),kokkos_cuda)
 
 else ifeq ($(ARCH),openmptarget_icx)
 	CXX = icpx
-	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ # compiler specific
+	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ -g
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
-	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -ffast-math -Wdeprecated # compiler specific
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -ffast-math -Wdeprecated -g
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
 else ifeq ($(ARCH),openmptarget_xl)
 	CXX = xlc++
-	CXXFLAGS = -qsmp=omp -qoffload
+	CXXFLAGS = -qsmp=omp -qoffload -g
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/GSimulation.cpp 
 
 else ifeq ($(ARCH),opencl)
 	CXX=icpc
-	CXXFLAGS = -lOpenCL
+	CXXFLAGS = -lOpenCL -g
 	INCLUDES = -I./programming_models/opencl -I./
 	SOURCES = ./programming_models/opencl/GSimulation.cpp  
 
-else ifeq ($(ARCH),sycl)
+else ifeq ($(ARCH),sycl-intel)
 	CXX=clang++
-	CXXFLAGS = -std=c++11 -O2 -fsycl
+	CXXFLAGS = -std=c++11 -O2 -fsycl -g
+	INCLUDES = -I./programming_models/sycl -I./
+	SOURCES = ./programming_models/sycl/GSimulation.cpp  
+
+else ifeq ($(ARCH),sycl-codeplay)
+	CXX=compute++
+	CXXFLAGS = -std=c++11 -O2 -lComputeCpp -sycl-driver -g
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/GSimulation.cpp  
 
 else ifeq ($(ARCH),cpu)
 	CXX=icpc
-	CXXFLAGS = -xhost -qopenmp -DASALIGN # compiler specific
+	CXXFLAGS = -xhost -qopenmp -DASALIGN -g
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/GSimulation.cpp  
 endif
@@ -73,7 +79,7 @@ check_arch:
 ifndef ARCH
 	$(info ) 
 	$(info please set ARCH env var: )
-	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt)
+	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-codeplay)
 	$(error copmilation aborted.)
 endif
 
