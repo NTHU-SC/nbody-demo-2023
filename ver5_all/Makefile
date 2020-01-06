@@ -42,6 +42,12 @@ else ifeq ($(ARCH),opencl)
 	INCLUDES = -I./programming_models/opencl -I./
 	SOURCES = ./programming_models/opencl/GSimulation.cpp  
 
+else ifeq ($(ARCH),sycl)
+	CXX=clang++
+	CXXFLAGS = -std=c++11 -O2 -fsycl
+	INCLUDES = -I./programming_models/sycl -I./
+	SOURCES = ./programming_models/sycl/GSimulation.cpp  
+
 else ifeq ($(ARCH),cpu)
 	CXX=icpc
 	CXXFLAGS = -xhost -qopenmp -DASALIGN # compiler specific
