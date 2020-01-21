@@ -135,11 +135,13 @@ void GSimulation :: start()
      *  256 local size for all devices. Currently max of 2
      */
     cl::NDRange local[num_devices];
-    if (_cpu_wgsize != 0 and _gpu_wgsize != 0) {
-      local[0] = cl::NDRange(_cpu_wgsize);
-      local[1] = cl::NDRange(_gpu_wgsize);
-      printf("CPU WorkGroup Size:%d\n", _cpu_wgsize);
-      printf("GPU WorkGroup Size:%d\n", _gpu_wgsize);
+    int cpu_wgsize = get_thread_dim0();
+    int gpu_wgsize = get_thread_dim1();
+    if ( cpu_wgsize != 0 or gpu_wgsize != 0) {
+      local[0] = cl::NDRange(cpu_wgsize);
+      local[1] = cl::NDRange(gpu_wgsize);
+      printf("CPU WorkGroup Size:%d\n", cpu_wgsize);
+      printf("GPU WorkGroup Size:%d\n", gpu_wgsize);
     } else {
       printf("Using automatic WorkGroup sizes\n");
     }

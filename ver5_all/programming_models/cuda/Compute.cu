@@ -31,7 +31,7 @@
 __global__ void nbody(real_type* particles_pos_x, real_type* particles_pos_y,
                       real_type* particles_pos_z, 
                       real_type* particles_acc_x, real_type* particles_acc_y,
-                      real_type* particles_acc_z, real_type* particles_mass, int n)
+                      real_type* particles_acc_z, real_type* particles_mass, const int n)
 {
   const float softeningSquared = 1.e-3f;
   const float G = 6.67259e-11f;
@@ -52,7 +52,8 @@ __global__ void nbody(real_type* particles_pos_x, real_type* particles_pos_y,
       dz = particles_pos_z[j] - particles_pos_z[i];  //1flop
 
       distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;        //6flops
-      distanceInv = 1.0f / sqrt(distanceSqr);                        //1div+1sqrt
+      //distanceInv = 1.0f / __fsqrt_rz(distanceSqr);                        //1div+1sqrt
+      distanceInv = 1.0f / sqrtf(distanceSqr);                        //1div+1sqrt
 
       ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
       ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops

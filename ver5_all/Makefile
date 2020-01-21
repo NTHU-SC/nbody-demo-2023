@@ -1,6 +1,6 @@
 ifeq ($(ARCH),cuda)
 	CXX = nvcc
-	CXXFLAGS = -gencode arch=compute_70,code=sm_70 
+	CXXFLAGS = -gencode arch=compute_70,code=sm_70  -use_fast_math 
 	INCLUDES = -I./programming_models/cuda -I./
 	SOURCES = ./programming_models/cuda/Compute.cu
 
