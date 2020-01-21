@@ -82,8 +82,26 @@ EXEC=nbody.x
 all: cpu
 
 check_arch:
-ifndef ARCH
-	$(info ) 
+ifeq ($(ARCH), cpu)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), opencl)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), kokkos)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), kokkos_cuda)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), openmptarget_icx)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), openmptarget_clang-ykt)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), sycl-intel)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), sycl-codeplay)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), cuda)
+	$(info Building Nbody for $(ARCH) )
+else
+	$(info ARCH = ${ARCH} ) 
 	$(info please set ARCH env var: )
 	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-codeplay, cuda)
 	$(error copmilation aborted.)
@@ -110,6 +128,7 @@ run:
 	./nbody.x 
 	
 clean: 
-	rm -f $(OBJSC) nbody.x *.optrpt 
+	$(info) $(OBJSC)
+	#rm -f $(OBJSC) nbody.x *.optrpt 
 
 
