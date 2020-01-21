@@ -133,7 +133,14 @@ void GSimulation :: start()
   double av=0.0, dev=0.0;
   int nf = 0;
 
-
+  size_t block_size;
+  if (get_thread_dim0() != 0 ) {
+    block_size = get_thread_dim0();
+  } else {
+    block_size = 1024;
+  }
+  const size_t grid_size = (n + block_size - 1) / block_size;
+  std::cout << "using block_size = " << block_size << std::endl;
   
   const double t0 = time.start();
   for (int s=1; s<=get_nsteps(); ++s)
@@ -146,8 +153,7 @@ void GSimulation :: start()
     cudaMemcpy(particles_pos_z_d, particles->pos_z, n * sizeof(real_type), cudaMemcpyHostToDevice);
 
 
-    const size_t block_size = 1024;
-    const size_t grid_size = (n + block_size - 1) / block_size;
+
 
     nbody<<<grid_size,block_size>>>(particles_pos_x_d, particles_pos_y_d,
                                     particles_pos_z_d,

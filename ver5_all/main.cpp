@@ -28,8 +28,8 @@ int main(int argc, char** argv)
   printf("nbody simulation OpenCL version.\n \
       ./nbody.x <num_particles> <num_steps> <cpu-to-gpu ratio> <cpu-wgsize> <gpu-wgsize>\n \
       <cpu-to-gpu-ratio> is optional and will default to 0 which will start a parameter sweep from 0 to 100 percent. \n \
-      <cpu-wgsize> is optional and will default to 0 which will allow the runtime to select work group size.\n \
-      <gpu-wgsize> is optional and will default to 0 which will allow the runtime to select work group size.\n \
+      <thread_dim0> refers to global workgroup size / CUDA block size and is optional and will default to 0.\n \
+      <thread_dim1> refers to local workgroup size and is optional and will default to 0.\n \
       to test for correctness: ./nbody.x 2000 500 <cpu/gpu/cpu+gpu> \n \
       last reported energy  level should be: ~571 \n \
       ");
@@ -55,8 +55,8 @@ int main(int argc, char** argv)
       sim.set_cpu_ratio(atof(argv[4]));
 
     if(argc > 5) {
-      sim.set_cpu_wgsize(atoi(argv[5]));
-      sim.set_gpu_wgsize(atoi(argv[6]));
+      sim.set_thread_dim0(atoi(argv[5]));
+      sim.set_thread_dim1(atoi(argv[6]));
     }
   }
   

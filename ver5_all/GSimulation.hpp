@@ -39,8 +39,10 @@ public:
   void update(real_type dt);
 
   inline void set_cpu_ratio(const float &cpu_ratio){ _cpu_ratio = cpu_ratio; }
-  inline void set_cpu_wgsize(const int &cpu_wgsize){ _cpu_wgsize = cpu_wgsize; }
-  inline void set_gpu_wgsize(const int &gpu_wgsize){ _gpu_wgsize = gpu_wgsize; }
+  inline void set_thread_dim0(const int &thread_dim0){ _thread_dim0 = thread_dim0; }
+  inline void set_thread_dim1(const int &thread_dim1){ _thread_dim1 = thread_dim1; }
+  inline int get_thread_dim0(){ return _thread_dim0; }
+  inline int get_thread_dim1(){ return _thread_dim1; }
   inline int get_cpu_ratio() const {return _cpu_ratio; }
   inline void set_devices(int N) { _devices = N;};
   inline int get_devices() { return _devices;};
@@ -60,8 +62,8 @@ private:
   double _totFlops;		//total number of flops 
 
   float _cpu_ratio = -1.0f;
-  int _cpu_wgsize = 0;
-  int _gpu_wgsize = 0;
+  int _thread_dim0 = 0;
+  int _thread_dim1 = 0;
   int _devices = 0;
    
   void init_pos();	
