@@ -74,7 +74,7 @@ SOURCES += main.cpp GSimulation.cpp
 .SUFFIXES: .o .cpp
 
 ##########################################
-OBJSC = $(SOURCES:.cpp=.o)
+OBJSC = $(addsuffix .o, $(basename ${SOURCES}))
 ##########################################
 
 EXEC=nbody.x
@@ -128,7 +128,6 @@ run:
 	./nbody.x 
 	
 clean: 
-	$(info) $(OBJSC)
-	#rm -f $(OBJSC) nbody.x *.optrpt 
+	rm -f $(OBJSC) nbody.x *.optrpt 
 
 
