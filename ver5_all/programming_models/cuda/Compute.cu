@@ -29,8 +29,7 @@
 
 
 __global__ void nbody(real_type* particles_pos_x, real_type* particles_pos_y,
-                      real_type* particles_pos_z, real_type* particles_vel_x,
-                      real_type* particles_vel_y, real_type* particles_vel_z,
+                      real_type* particles_pos_z, 
                       real_type* particles_acc_x, real_type* particles_acc_y,
                       real_type* particles_acc_z, real_type* particles_mass, int n)
 {
@@ -38,12 +37,9 @@ __global__ void nbody(real_type* particles_pos_x, real_type* particles_pos_y,
   const float G = 6.67259e-11f;
   size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i < n) {
-    real_type ax_i = particles_acc_x[i];
-    real_type ay_i = particles_acc_y[i];
-    real_type az_i = particles_acc_z[i];
-//    real_type ax_i = particles_acc_x[i];
-//    real_type ay_i = particles_acc_y[i];
-//    real_type az_i = particles_acc_z[i];
+    real_type ax_i = 0;
+    real_type ay_i = 0;
+    real_type az_i = 0;
 
     for (int j = 0; j < n; j++)
     {
@@ -93,10 +89,6 @@ void GSimulation :: start()
   real_type* particles_pos_y_d;
   real_type* particles_pos_z_d;
 
-  real_type* particles_vel_x_d;
-  real_type* particles_vel_y_d;
-  real_type* particles_vel_z_d;
-
   real_type* particles_acc_x_d;
   real_type* particles_acc_y_d;
   real_type* particles_acc_z_d;
@@ -107,10 +99,6 @@ void GSimulation :: start()
   cudaMalloc((void**)&particles_pos_x_d, n * sizeof(real_type));
   cudaMalloc((void**)&particles_pos_y_d, n * sizeof(real_type));
   cudaMalloc((void**)&particles_pos_z_d, n * sizeof(real_type));
-
-  cudaMalloc((void**)&particles_vel_x_d, n * sizeof(real_type));
-  cudaMalloc((void**)&particles_vel_y_d, n * sizeof(real_type));
-  cudaMalloc((void**)&particles_vel_z_d, n * sizeof(real_type));
 
   cudaMalloc((void**)&particles_acc_x_d, n * sizeof(real_type));
   cudaMalloc((void**)&particles_acc_y_d, n * sizeof(real_type));
@@ -129,10 +117,6 @@ void GSimulation :: start()
   cudaMemcpy(particles_pos_y_d, particles->pos_y, n * sizeof(real_type), cudaMemcpyHostToDevice);
   cudaMemcpy(particles_pos_z_d, particles->pos_z, n * sizeof(real_type), cudaMemcpyHostToDevice);
 
-  cudaMemcpy(particles_vel_x_d, particles->vel_x, n * sizeof(real_type), cudaMemcpyHostToDevice);
-  cudaMemcpy(particles_vel_y_d, particles->vel_y, n * sizeof(real_type), cudaMemcpyHostToDevice);
-  cudaMemcpy(particles_vel_z_d, particles->vel_z, n * sizeof(real_type), cudaMemcpyHostToDevice);
-
   cudaMemcpy(particles_acc_x_d, particles->acc_x, n * sizeof(real_type), cudaMemcpyHostToDevice);
   cudaMemcpy(particles_acc_y_d, particles->acc_y, n * sizeof(real_type), cudaMemcpyHostToDevice);
   cudaMemcpy(particles_acc_z_d, particles->acc_z, n * sizeof(real_type), cudaMemcpyHostToDevice);
@@ -141,9 +125,6 @@ void GSimulation :: start()
   
   _totTime = 0.; 
  
-  const float softeningSquared = 1.e-3f;
-  const float G = 6.67259e-11f;
-  
   CPUTime time;
   double ts0 = 0;
   double ts1 = 0;
@@ -160,8 +141,6 @@ void GSimulation :: start()
 
     ts0 += time.start(); 
 
-
-
     cudaMemcpy(particles_pos_x_d, particles->pos_x, n * sizeof(real_type), cudaMemcpyHostToDevice);
     cudaMemcpy(particles_pos_y_d, particles->pos_y, n * sizeof(real_type), cudaMemcpyHostToDevice);
     cudaMemcpy(particles_pos_z_d, particles->pos_z, n * sizeof(real_type), cudaMemcpyHostToDevice);
@@ -171,8 +150,7 @@ void GSimulation :: start()
     const size_t grid_size = (n + block_size - 1) / block_size;
 
     nbody<<<grid_size,block_size>>>(particles_pos_x_d, particles_pos_y_d,
-                                    particles_pos_z_d, particles_vel_x_d,
-                                    particles_vel_y_d, particles_vel_z_d,
+                                    particles_pos_z_d,
                                     particles_acc_x_d, particles_acc_y_d,
                                     particles_acc_z_d, particles_mass_d, n);
 
