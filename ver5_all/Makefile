@@ -1,4 +1,10 @@
-ifeq ($(ARCH),kokkos)
+ifeq ($(ARCH),cuda)
+	CXX = nvcc
+	CXXFLAGS = -gencode arch=compute_70,code=sm_70 
+	INCLUDES = -I./programming_models/cuda -I./
+	SOURCES = ./programming_models/cuda/Compute.cu
+
+else ifeq ($(ARCH),kokkos)
 	CXX = icpc
 	CXXFLAGS = -qopenmp -DKOKKOS -DASALIGN
 	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
@@ -79,9 +85,14 @@ check_arch:
 ifndef ARCH
 	$(info ) 
 	$(info please set ARCH env var: )
-	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-codeplay)
+	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-codeplay, cuda)
 	$(error copmilation aborted.)
 endif
+
+%.o: %.cu
+	$(info )
+	$(info Compiling the object file for CUDA: )
+	$(CXX) $(CXXFLAGS) $(COMPFLAGS) $(INCLUDES) -c $< -o $@
 
 %.o: %.cpp
 	$(info )
