@@ -23,14 +23,14 @@ else ifeq ($(ARCH),kokkos_cuda)
 
 else ifeq ($(ARCH),openmptarget_icx)
 	CXX = icpx
-	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
+	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ -fast-math
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
-	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -Wdeprecated
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -Wdeprecated -ffast-math
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
@@ -50,19 +50,19 @@ else ifeq ($(ARCH),opencl)
 
 else ifeq ($(ARCH),sycl-intel)
 	CXX=clang++
-	CXXFLAGS = -fsycl
+	CXXFLAGS = -fsycl # -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-codeplay)
 	CXX=compute++
-	CXXFLAGS = -lComputeCpp -sycl-driver
+	CXXFLAGS = -lComputeCpp -sycl-driver # -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-hipsycl)
 	CXX=syclcc-clang-wrapper #wrapper just sets -gcc-toolchain
-	CXXFLAGS = 
+	CXXFLAGS =  # -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 

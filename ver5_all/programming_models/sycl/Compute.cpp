@@ -102,8 +102,13 @@ void GSimulation :: start()
 
 
        cgh.parallel_for<class update_accel>(
+#ifdef MAXTHREADS
        range<1>(total_threads), [=](item<1> item) {  // good
        for (int i = item.get_id()[0]; i < n; i+=total_threads)
+#else
+       range<1>(n), [=](item<1> item) {
+       auto i = item.get_id();
+#endif
        {
          real_type ax_i = particles_acc_x[i];
          real_type ay_i = particles_acc_y[i];
