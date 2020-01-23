@@ -81,20 +81,17 @@ void GSimulation :: start()
 map(to: particles_pos_x[:n]) \
 map(to: particles_pos_y[:n]) \
 map(to: particles_pos_z[:n]) \
-map(to: particles_vel_x[:n]) \
-map(to: particles_vel_y[:n]) \
-map(to: particles_vel_z[:n]) \
-map(tofrom: particles_acc_x[:n]) \
-map(tofrom: particles_acc_y[:n]) \
-map(tofrom: particles_acc_z[:n]) \
+map(from: particles_acc_x[:n]) \
+map(from: particles_acc_y[:n]) \
+map(from: particles_acc_z[:n]) \
 map(to: particles_mass [:n]) \
    
 {
    for (i = 0; i < n; i++)// update acceleration
    {
-     real_type ax_i = particles_acc_x[i];
-     real_type ay_i = particles_acc_y[i];
-     real_type az_i = particles_acc_z[i];
+     real_type ax_i = 0;
+     real_type ay_i = 0;
+     real_type az_i = 0;
 #pragma omp simd
      for (j = 0; j < n; j++)
      {
