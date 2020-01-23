@@ -82,10 +82,6 @@ void GSimulation :: start()
   buffer<real_type, 1> particles_pos_y_d(particles->pos_y, range<1>(n));
   buffer<real_type, 1> particles_pos_z_d(particles->pos_z, range<1>(n));
 
-  buffer<real_type, 1> particles_vel_x_d(particles->vel_x, range<1>(n));
-  buffer<real_type, 1> particles_vel_y_d(particles->vel_y, range<1>(n));
-  buffer<real_type, 1> particles_vel_z_d(particles->vel_z, range<1>(n));
-
   buffer<real_type, 1> particles_acc_x_d(particles->acc_x, range<1>(n));
   buffer<real_type, 1> particles_acc_y_d(particles->acc_y, range<1>(n));
   buffer<real_type, 1> particles_acc_z_d(particles->acc_z, range<1>(n));
@@ -97,10 +93,6 @@ void GSimulation :: start()
        auto particles_acc_x = particles_acc_x_d.get_access<access::mode::read_write>(cgh);
        auto particles_acc_y = particles_acc_y_d.get_access<access::mode::read_write>(cgh);
        auto particles_acc_z = particles_acc_z_d.get_access<access::mode::read_write>(cgh);
-
-       auto particles_vel_x = particles_vel_x_d.get_access<access::mode::read>(cgh);
-       auto particles_vel_y = particles_vel_y_d.get_access<access::mode::read>(cgh);
-       auto particles_vel_z = particles_vel_z_d.get_access<access::mode::read>(cgh);
 
        auto particles_pos_x = particles_pos_x_d.get_access<access::mode::read>(cgh);
        auto particles_pos_y = particles_pos_y_d.get_access<access::mode::read>(cgh);
