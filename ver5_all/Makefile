@@ -30,7 +30,7 @@ else ifeq ($(ARCH),openmptarget_icx)
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
-	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -ffast-math -Wdeprecated
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -Wdeprecated
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
@@ -50,15 +50,22 @@ else ifeq ($(ARCH),opencl)
 
 else ifeq ($(ARCH),sycl-intel)
 	CXX=clang++
-	CXXFLAGS = -std=c++11 -O2 -fsycl
+	CXXFLAGS = -fsycl
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-codeplay)
 	CXX=compute++
-	CXXFLAGS = -std=c++11 -O2 -lComputeCpp -sycl-driver
+	CXXFLAGS = -lComputeCpp -sycl-driver
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
+
+else ifeq ($(ARCH),sycl-hipsycl)
+	CXX=syclcc-clang-wrapper #wrapper just sets -gcc-toolchain
+	CXXFLAGS = 
+	INCLUDES = -I./programming_models/sycl -I./
+	SOURCES = ./programming_models/sycl/Compute.cpp  
+
 
 else ifeq ($(ARCH),cpu)
 	CXX=icpc
@@ -68,7 +75,7 @@ else ifeq ($(ARCH),cpu)
 endif
 
 
-COMPFLAGS = -g -std=c++11 -O2
+COMPFLAGS = -g -std=c++14 -O2
 SOURCES += main.cpp GSimulation.cpp
 
 .SUFFIXES: .o .cpp
@@ -97,6 +104,8 @@ else ifeq ($(ARCH), openmptarget_clang-ykt)
 else ifeq ($(ARCH), sycl-intel)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-codeplay)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), sycl-hipsycl)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), cuda)
 	$(info Building Nbody for $(ARCH) )
@@ -128,6 +137,6 @@ run:
 	./nbody.x 
 	
 clean: 
-	rm -f $(OBJSC) nbody.x *.optrpt 
+	rm -f $(OBJSC) nbody.x *.optrpt   ./programming_models/*/*.o
 
 
