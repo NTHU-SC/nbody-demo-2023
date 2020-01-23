@@ -109,9 +109,18 @@ void GSimulation :: start()
        auto particles_mass = particles_mass_d.get_access<access::mode::read>(cgh);
 
 
+       int wgsize = get_thread_dim0();
+       std::cout << "Using workgroup size: " << wgsize << std::endl;
+       auto exec_range = nd_range<1>(range<1>(total_threads), range<1>(wgsize), id<1>(0));
+//       range<1> exec_range;
+//       if (wgsize != 0) {
+//         auto exec_range = range<1>(total_threads);
+//       } else {
+//         auto exec_range = nd_range<1>(total_threads, wgsize);
+//       }
        cgh.parallel_for<class update_accel>(
-       range<1>(total_threads), [=](item<1> item) {  // good
-       for (int i = item.get_id()[0]; i < n; i+=total_threads)
+       exec_range, [=](nd_item<1> item) {  // good
+       for (int i = item.get_global_linear_id(); i < n; i+=total_threads)
        {
          real_type ax_i = particles_acc_x[i];
          real_type ay_i = particles_acc_y[i];
