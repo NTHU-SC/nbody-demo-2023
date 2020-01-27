@@ -33,18 +33,26 @@ void GSimulation :: start()
   const float softeningSquared = 1.e-3f;
   const float G = 6.67259e-11f;
   
-  CPUTime time;
-  double ts0 = 0;
-  double ts1 = 0;
-  double nd = double(n);
-  double gflops = 1e-9 * ( (11. + 18. ) * nd*nd  +  nd * 19. );
-  double av=0.0, dev=0.0;
-  int nf = 0;
-  
+  ts0 = 0;
+  ts1 = 0;
+  nd = double(n);
+  gflops = 1e-9 * ( (11. + 18. ) * nd*nd  +  nd * 19. );
+  av=0.0, dev=0.0;
+  nf = 0;
+
   const double t0 = time.start();
-  for (int s=1; s<=get_nsteps(); ++s) {
+  for (s=1; s<=get_nsteps(); ++s) {
     ts0 += time.start(); 
-    for (i = 0; i < n; i++) { // update acceleration
+
+#ifdef USE_MPI
+    mpi_bcast_all();
+#endif
+    int start, end;
+    start = world_rank * npp;
+    end = start + npp;
+
+    for (i = start; i < end; i++) { // update acceleration
+
 #ifdef ASALIGN
       __assume_aligned(particles->pos_x, alignment);
       __assume_aligned(particles->pos_y, alignment);
@@ -70,7 +78,7 @@ void GSimulation :: start()
         distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
         distanceInv = 1.0f / sqrtf(distanceSqr);			//1div+1sqrt
 
-        ax_i+= dx * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+        ax_i += dx * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
         ay_i += dy * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
         az_i += dz * G * particles->mass[j] * distanceInv * distanceInv * distanceInv; //6flops
       }  
@@ -79,6 +87,13 @@ void GSimulation :: start()
       particles->acc_y[i] = ay_i;
       particles->acc_z[i] = az_i;
     }
+
+#ifdef USE_MPI
+    mpi_gather_acc(start);
+#endif
+
+
+
 
     energy = 0;
 
@@ -105,22 +120,7 @@ void GSimulation :: start()
     _kenergy = 0.5 * energy; 
 
     ts1 += time.stop();
-    if(!(s%get_sfreq())) {
-      nf += 1;      
-      std::cout << " " 
-      <<  std::left << std::setw(8)  << s
-      <<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
-      <<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
-      <<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
-      <<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
-      <<  std::endl;
-      if(nf > 2) {
-        av  += gflops*get_sfreq()/(ts1 - ts0);
-        dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
-      }
-      ts0 = 0;
-      ts1 = 0;
-      }
+    print_stats();
   } //end of the time step loop
   
   const double t1 = time.stop();
@@ -130,12 +130,5 @@ void GSimulation :: start()
   av/=(double)(nf-2);
   dev=sqrt(dev/(double)(nf-2)-av*av);
   
-  int nthreads=1;
-
-  std::cout << std::endl;
-  std::cout << "# Number Threads     : " << nthreads << std::endl;	   
-  std::cout << "# Total Time (s)     : " << _totTime << std::endl;
-  std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
-  std::cout << "===============================" << std::endl;
-
+  print_flops();
 }

@@ -68,8 +68,8 @@ else ifeq ($(ARCH),sycl-hipsycl)
 
 
 else ifeq ($(ARCH),cpu)
-	CXX=icpc
-	CXXFLAGS = -xhost -qopenmp -DASALIGN
+	CXX=mpiicpc
+	CXXFLAGS = -xhost -qopenmp -DASALIGN -DUSE_MPI
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/Compute.cpp  
 endif

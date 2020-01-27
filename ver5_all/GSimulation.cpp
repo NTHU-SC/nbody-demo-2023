@@ -23,12 +23,15 @@
 
 GSimulation :: GSimulation()
 {
-  std::cout << "===============================" << std::endl;
-  std::cout << " Initialize Gravity Simulation" << std::endl;
   set_npart(2000); 
   set_nsteps(500);
   set_tstep(0.1); 
   set_sfreq(50);
+  init_mpi();
+  if (world_rank == 0) {
+    std::cout << "===============================" << std::endl;
+    std::cout << " Initialize Gravity Simulation" << std::endl;
+  }
 }
 
 void GSimulation :: set_number_of_particles(int N)  
@@ -92,9 +95,36 @@ void GSimulation :: init_mass()
   }
 }
 
+void GSimulation :: init_mpi() 
+{
+  MPI_Init(NULL, NULL);
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  //std::cout << "World size = " << world_size << std::endl;
+
+  // quit if uneven domains
+  int n = get_npart();
+  if (n % world_size != 0) {
+    MPI_Finalize();
+  if (world_rank == 0)
+    std::cout << "Number of particles not divisible by MPI Ranks. Quitting..." << std::endl;
+    exit(1);
+  }
+  // get share n
+  if (world_rank == 0) {
+    npp = n / world_size + n % world_size;
+  } else {
+    npp = n / world_size;
+  }
+  int max_npp = n / world_size + n % world_size;
+  std::cout << "Rank: " << world_rank << " Share: " << npp << std::endl;
+  int i,j;
+
+}
+
 void GSimulation :: print_header()
 {
-	    
+  if (world_rank == 0) {
   std::cout << " nPart = " << get_npart()  << "; " 
 	    << "nSteps = " << get_nsteps() << "; " 
 	    << "dt = "     << get_tstep()  << std::endl;
@@ -108,8 +138,77 @@ void GSimulation :: print_header()
 	    <<  std::left << std::setw(12) << "GFlops"
 	    <<  std::endl;
   std::cout << "------------------------------------------------" << std::endl;
+  }
+}
 
+void GSimulation :: print_stats()
+{
+  if (world_rank == 0) {
+  if(!(s%get_sfreq())) {
+    nf += 1;      
+    std::cout << " " 
+    <<  std::left << std::setw(8)  << s
+    <<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
+    <<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
+    <<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
+    <<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
+    <<  std::endl;
+    if(nf > 2) {
+      av  += gflops*get_sfreq()/(ts1 - ts0);
+      dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
+    }
+    ts0 = 0;
+    ts1 = 0;
+    }
 
+    }
+}
+
+void GSimulation :: print_flops() 
+{
+  if (world_rank == 0) {
+  std::cout << std::endl;
+  std::cout << "# Number Threads     : " << nthreads << std::endl;	   
+  std::cout << "# Total Time (s)     : " << _totTime << std::endl;
+  std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
+  std::cout << "===============================" << std::endl;
+  }
+}
+
+void GSimulation :: mpi_bcast_all() 
+{
+  int n = get_npart();
+   // update all ranks with latest data from master
+   MPI_Bcast(particles->vel_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->vel_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->vel_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+   MPI_Bcast(particles->pos_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->pos_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->pos_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+   MPI_Bcast(particles->acc_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->acc_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(particles->acc_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+   MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void GSimulation :: mpi_gather_acc(int start) 
+{
+  int n = get_npart();
+  float accx[n];
+  float accy[n];
+  float accz[n];
+  MPI_Gather(particles->acc_x + start, npp, MPI_FLOAT, accx, npp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(particles->acc_y + start, npp, MPI_FLOAT, accy, npp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(particles->acc_z + start, npp, MPI_FLOAT, accz, npp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+  for (int ii = 0; ii < n; ii++) {
+    particles->acc_x[ii] = accx[ii];
+    particles->acc_y[ii] = accy[ii];
+    particles->acc_z[ii] = accz[ii];
+  }
 }
 
 GSimulation :: ~GSimulation()
@@ -125,4 +224,8 @@ GSimulation :: ~GSimulation()
   free(particles->acc_z);
   free(particles->mass);
   free(particles);
+
+#ifdef USE_MPI
+  MPI_Finalize();
+#endif
 }
