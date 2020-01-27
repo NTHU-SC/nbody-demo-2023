@@ -56,6 +56,7 @@ public:
   int world_size;
  // int n; // number total particles
   int npp; // number perticles per process
+  int *npp_global;
   void init_mpi();
 
   

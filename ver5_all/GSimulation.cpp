@@ -97,29 +97,23 @@ void GSimulation :: init_mass()
 
 void GSimulation :: init_mpi() 
 {
+#ifdef USE_MPI
   MPI_Init(NULL, NULL);
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-  //std::cout << "World size = " << world_size << std::endl;
-
-  // quit if uneven domains
   int n = get_npart();
-  if (n % world_size != 0) {
-    MPI_Finalize();
-  if (world_rank == 0)
-    std::cout << "Number of particles not divisible by MPI Ranks. Quitting..." << std::endl;
-    exit(1);
-  }
-  // get share n
+  npp_global = (int*)malloc(world_size * sizeof(int));
   if (world_rank == 0) {
     npp = n / world_size + n % world_size;
+    npp_global[0] = npp;
+    for (int i = 1; i < world_size; i++)
+      npp_global[i] = n / world_size;
   } else {
     npp = n / world_size;
   }
-  int max_npp = n / world_size + n % world_size;
-  std::cout << "Rank: " << world_rank << " Share: " << npp << std::endl;
-  int i,j;
-
+  MPI_Bcast(npp_global, world_size, MPI_INT, 0, MPI_COMM_WORLD);
+  //std::cout << "Rank: " << world_rank << " Share: " << npp << std::endl;
+#endif
 }
 
 void GSimulation :: print_header()
@@ -177,38 +171,48 @@ void GSimulation :: print_flops()
 
 void GSimulation :: mpi_bcast_all() 
 {
+#ifdef USE_MPI
   int n = get_npart();
-   // update all ranks with latest data from master
-   MPI_Bcast(particles->vel_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(particles->vel_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(particles->vel_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  // update all ranks with latest data from master
+  MPI_Bcast(particles->vel_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->vel_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->vel_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-   MPI_Bcast(particles->pos_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(particles->pos_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(particles->pos_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->pos_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->pos_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->pos_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-   MPI_Bcast(particles->acc_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(particles->acc_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(particles->acc_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->acc_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->acc_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->acc_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-   MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 void GSimulation :: mpi_gather_acc(int start) 
 {
+#ifdef USE_MPI
   int n = get_npart();
   float accx[n];
   float accy[n];
   float accz[n];
-  MPI_Gather(particles->acc_x + start, npp, MPI_FLOAT, accx, npp, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Gather(particles->acc_y + start, npp, MPI_FLOAT, accy, npp, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Gather(particles->acc_z + start, npp, MPI_FLOAT, accz, npp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  int disp[world_size];
+  disp[0] = 0;
+  for (int i = 1; i < world_size; i++)
+    disp[i] = disp[i-1] + npp_global[i-1];
 
+  MPI_Gatherv(particles->acc_x + disp[world_rank], npp_global[world_rank], MPI_FLOAT, accx, npp_global, disp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gatherv(particles->acc_y + disp[world_rank], npp_global[world_rank], MPI_FLOAT, accy, npp_global, disp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gatherv(particles->acc_z + disp[world_rank], npp_global[world_rank], MPI_FLOAT, accz, npp_global, disp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+  MPI_Barrier(MPI_COMM_WORLD);
   for (int ii = 0; ii < n; ii++) {
     particles->acc_x[ii] = accx[ii];
     particles->acc_y[ii] = accy[ii];
     particles->acc_z[ii] = accz[ii];
   }
+#endif
 }
 
 GSimulation :: ~GSimulation()

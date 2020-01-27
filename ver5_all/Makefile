@@ -49,7 +49,7 @@ else ifeq ($(ARCH),opencl)
 	SOURCES = ./programming_models/opencl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel)
-	CXX=clang++
+	CXX=dpcpp
 	CXXFLAGS = -fsycl # -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
@@ -68,8 +68,8 @@ else ifeq ($(ARCH),sycl-hipsycl)
 
 
 else ifeq ($(ARCH),cpu)
-	CXX=mpiicpc
-	CXXFLAGS = -xhost -qopenmp -DASALIGN -DUSE_MPI
+	CXX=icpc
+	CXXFLAGS = -xhost -qopenmp -DASALIGN
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/Compute.cpp  
 endif

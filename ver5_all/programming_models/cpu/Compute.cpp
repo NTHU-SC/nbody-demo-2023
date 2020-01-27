@@ -44,13 +44,17 @@ void GSimulation :: start()
   for (s=1; s<=get_nsteps(); ++s) {
     ts0 += time.start(); 
 
+    int start, end;
 #ifdef USE_MPI
     mpi_bcast_all();
-#endif
-    int start, end;
     start = world_rank * npp;
-    end = start + npp;
+    end = start + npp_global[0];
+#else
+    start = 0;
+    end = n;
+#endif
 
+    //std::cout << "rank " << world_rank << " start " << start << " end " << end << std::endl;
     for (i = start; i < end; i++) { // update acceleration
 
 #ifdef ASALIGN
