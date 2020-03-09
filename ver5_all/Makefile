@@ -54,6 +54,13 @@ else ifeq ($(ARCH),sycl-intel)
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
+else ifeq ($(ARCH),sycl-intel-usm)
+	CXX=dpcpp
+	CXXFLAGS = -fsycl # -DMAXTHREADS
+	INCLUDES = -I./programming_models/sycl_usm -I./
+	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
+
+
 else ifeq ($(ARCH),sycl-codeplay)
 	CXX=compute++
 	CXXFLAGS = -lComputeCpp -sycl-driver # -DMAXTHREADS
@@ -103,6 +110,8 @@ else ifeq ($(ARCH), openmptarget_clang-ykt)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-intel)
 	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), sycl-intel-usm)
+	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-codeplay)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-hipsycl)
@@ -112,7 +121,7 @@ else ifeq ($(ARCH), cuda)
 else
 	$(info ARCH = ${ARCH} ) 
 	$(info please set ARCH env var: )
-	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-codeplay, cuda)
+	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-intel-usm, sycl-codeplay, cuda)
 	$(error copmilation aborted.)
 endif
 
