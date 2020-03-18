@@ -56,7 +56,7 @@ else ifeq ($(ARCH),sycl-intel)
 
 else ifeq ($(ARCH),sycl-intel-usm)
 	CXX=dpcpp
-	CXXFLAGS = -fsycl # -DMAXTHREADS
+	CXXFLAGS = -fsycl -DUSM # -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
@@ -82,7 +82,7 @@ else ifeq ($(ARCH),cpu)
 endif
 
 
-COMPFLAGS = -g -std=c++14 -O2
+COMPFLAGS = -std=c++14 -O2
 SOURCES += main.cpp GSimulation.cpp
 
 .SUFFIXES: .o .cpp

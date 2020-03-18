@@ -215,6 +215,7 @@ void GSimulation :: mpi_gather_acc(int start)
 #endif
 }
 
+#ifndef USM
 GSimulation :: ~GSimulation()
 {
   free(particles->pos_x);
@@ -233,3 +234,4 @@ GSimulation :: ~GSimulation()
   MPI_Finalize();
 #endif
 }
+#endif
