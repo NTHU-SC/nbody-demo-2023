@@ -27,7 +27,27 @@ using namespace cl::sycl;
 
 void GSimulation :: start() 
 {
-  queue q = queue(gpu_selector{});
+#ifdef SYCL4CUDA
+  class CUDASelector : public cl::sycl::device_selector {
+  public:
+    int operator()(const cl::sycl::device &Device) const override {
+
+      const std::string DriverVersion = Device.get_info<info::device::driver_version>();
+
+      if (Device.is_gpu() && (DriverVersion.find("CUDA") != std::string::npos)) {
+        return 1;
+      };
+      return -1;
+    }
+};
+  auto q = queue(CUDASelector{});
+  auto _dev = q.get_device();
+  auto _ctx = q.get_context();
+#else
+  auto q = queue(gpu_selector{});
+  auto _dev = q.get_device();
+  auto _ctx = q.get_context();
+#endif
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
@@ -125,7 +145,7 @@ void GSimulation :: start()
 	         dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
 	
  	         distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	         distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
+ 	         distanceInv = 1.0f / (distanceSqr);			//1div+1sqrt
 
 	         ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
 	         ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops

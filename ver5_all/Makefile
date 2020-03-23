@@ -48,9 +48,15 @@ else ifeq ($(ARCH),opencl)
 	INCLUDES = -I./programming_models/opencl -I./
 	SOURCES = ./programming_models/opencl/Compute.cpp  
 
-else ifeq ($(ARCH),sycl-4gpu-usm)
+else ifeq ($(ARCH),sycl-4cuda)
 	CXX=clang++
-	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4GPU  # -DMAXTHREADS 
+	CXXFLAGS = -fsycl -ffast-math -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA  -DMAXTHREADS 
+	INCLUDES = -I./programming_models/sycl -I./
+	SOURCES = ./programming_models/sycl/Compute.cpp  
+
+else ifeq ($(ARCH),sycl-4cuda-usm)
+	CXX=clang++
+	CXXFLAGS = -fsycl -ffast-math -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA  -DMAXTHREADS 
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
@@ -116,7 +122,9 @@ else ifeq ($(ARCH), openmptarget_clang-ykt)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-intel)
 	$(info Building Nbody for $(ARCH) )
-else ifeq ($(ARCH), sycl-4gpu-usm)
+else ifeq ($(ARCH), sycl-4cuda-usm)
+	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), sycl-4cuda)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-intel-usm)
 	$(info Building Nbody for $(ARCH) )
@@ -129,7 +137,7 @@ else ifeq ($(ARCH), cuda)
 else
 	$(info ARCH = ${ARCH} ) 
 	$(info please set ARCH env var: )
-	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-intel-usm, sycl-4gpu, sycl-codeplay, cuda)
+	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-intel-usm, sycl-4cuda, sycl-4cuda-usm, sycl-codeplay, cuda)
 	$(error copmilation aborted.)
 endif
 
