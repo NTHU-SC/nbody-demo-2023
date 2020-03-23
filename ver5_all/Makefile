@@ -48,15 +48,21 @@ else ifeq ($(ARCH),opencl)
 	INCLUDES = -I./programming_models/opencl -I./
 	SOURCES = ./programming_models/opencl/Compute.cpp  
 
+else ifeq ($(ARCH),sycl-4gpu-usm)
+	CXX=clang++
+	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4GPU  # -DMAXTHREADS 
+	INCLUDES = -I./programming_models/sycl_usm -I./
+	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
+
 else ifeq ($(ARCH),sycl-intel)
 	CXX=dpcpp
-	CXXFLAGS = -fsycl # -DMAXTHREADS
+	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only # -DMAXTHREADS 
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel-usm)
 	CXX=dpcpp
-	CXXFLAGS = -fsycl -DUSM # -DMAXTHREADS
+	CXXFLAGS = -fsycl -DUSM -fdebug-info-for-profiling -gline-tables-only  -DMAXTHREADS -ffast-math
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
@@ -69,7 +75,7 @@ else ifeq ($(ARCH),sycl-codeplay)
 
 else ifeq ($(ARCH),sycl-hipsycl)
 	CXX=syclcc-clang-wrapper #wrapper just sets -gcc-toolchain
-	CXXFLAGS =  # -DMAXTHREADS
+	CXXFLAGS = #-ffast-math
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
@@ -110,6 +116,8 @@ else ifeq ($(ARCH), openmptarget_clang-ykt)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-intel)
 	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), sycl-4gpu-usm)
+	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-intel-usm)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), sycl-codeplay)
@@ -121,7 +129,7 @@ else ifeq ($(ARCH), cuda)
 else
 	$(info ARCH = ${ARCH} ) 
 	$(info please set ARCH env var: )
-	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-intel-usm, sycl-codeplay, cuda)
+	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-intel-usm, sycl-4gpu, sycl-codeplay, cuda)
 	$(error copmilation aborted.)
 endif
 
