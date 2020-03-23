@@ -145,7 +145,7 @@ void GSimulation :: start()
 	         dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
 	
  	         distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
- 	         distanceInv = 1.0f / (distanceSqr);			//1div+1sqrt
+ 	         distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
 
 	         ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
 	         ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops

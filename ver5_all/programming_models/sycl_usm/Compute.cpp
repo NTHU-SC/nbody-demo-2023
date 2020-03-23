@@ -102,11 +102,25 @@ void GSimulation :: start()
 
   auto* particles_mass = particles->mass;
 
+  // Set up Max Total Threads
+  auto num_groups = q.get_device().get_info<info::device::max_compute_units>();
+  auto work_group_size =q.get_device().get_info<info::device::max_work_group_size>();
+  auto total_threads = (int)(num_groups * work_group_size);
+
   for (int s=1; s<=get_nsteps(); ++s) {
     ts0 += time.start(); 
     q.submit([&] (handler& cgh) {
-      cgh.parallel_for<class accel>(range<1>(n), [=](id<1> idx) { 
-      int i = idx[0];
+
+       cgh.parallel_for<class update_accel>(
+#ifdef MAXTHREADS
+       range<1>(total_threads), [=](item<1> item) {  // good
+       for (int i = item.get_id()[0]; i < n; i+=total_threads)
+#else
+       range<1>(n), [=](item<1> item) {
+       auto i = item.get_id();
+#endif
+
+      { 
       real_type ax_i = particles_acc_x[i];
       real_type ay_i = particles_acc_y[i];
       real_type az_i = particles_acc_z[i];
@@ -120,7 +134,7 @@ void GSimulation :: start()
      	  dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
      	
         distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
-        distanceInv = 1.0f / (distanceSqr);			//1div+1sqrt
+        distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
      
      	  ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
      	  ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
@@ -129,6 +143,7 @@ void GSimulation :: start()
       particles_acc_x[i] = ax_i;
       particles_acc_y[i] = ay_i;
       particles_acc_z[i] = az_i;
+      }
      }); // parallel_for
    }); // queue scope
    q.wait();

@@ -23,7 +23,7 @@ else ifeq ($(ARCH),kokkos_cuda)
 
 else ifeq ($(ARCH),openmptarget_icx)
 	CXX = icpx
-	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ -fast-math
+	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ -ffast-math
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
@@ -50,38 +50,38 @@ else ifeq ($(ARCH),opencl)
 
 else ifeq ($(ARCH),sycl-4cuda)
 	CXX=clang++
-	CXXFLAGS = -fsycl -ffast-math -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA  -DMAXTHREADS 
+	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-4cuda-usm)
 	CXX=clang++
-	CXXFLAGS = -fsycl -ffast-math -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA  -DMAXTHREADS 
+	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA 
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel)
 	CXX=dpcpp
-	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only # -DMAXTHREADS 
+	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel-usm)
 	CXX=dpcpp
-	CXXFLAGS = -fsycl -DUSM -fdebug-info-for-profiling -gline-tables-only  -DMAXTHREADS -ffast-math
+	CXXFLAGS = -fsycl -DUSM -fdebug-info-for-profiling -gline-tables-only  -ffast-math
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
 
 else ifeq ($(ARCH),sycl-codeplay)
 	CXX=compute++
-	CXXFLAGS = -lComputeCpp -sycl-driver # -DMAXTHREADS
+	CXXFLAGS = -lComputeCpp -sycl-driver 
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-hipsycl)
 	CXX=syclcc-clang-wrapper #wrapper just sets -gcc-toolchain
-	CXXFLAGS = #-ffast-math
+	CXXFLAGS = -ffast-math
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
@@ -94,7 +94,7 @@ else ifeq ($(ARCH),cpu)
 endif
 
 
-COMPFLAGS = -std=c++14 -O2
+COMPFLAGS = -std=c++14 -O2 -DMAXTHREADS
 SOURCES += main.cpp GSimulation.cpp
 
 .SUFFIXES: .o .cpp
