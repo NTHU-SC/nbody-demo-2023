@@ -102,6 +102,8 @@ void GSimulation :: start()
 
   auto* particles_mass = particles->mass;
 
+  const ParticleSoA* __restrict__  _particles = particles;
+
   // Set up Max Total Threads
   auto num_groups = q.get_device().get_info<info::device::max_compute_units>();
   auto work_group_size =q.get_device().get_info<info::device::max_work_group_size>();
@@ -110,39 +112,40 @@ void GSimulation :: start()
   for (int s=1; s<=get_nsteps(); ++s) {
     ts0 += time.start(); 
     q.submit([&] (handler& cgh) {
+       const ParticleSoA particles = *_particles;
 
        cgh.parallel_for<class update_accel>(
 #ifdef MAXTHREADS
-       range<1>(total_threads), [=](item<1> item) {  // good
+       range<1>(total_threads), [=](item<1> item) [[cl::intel_reqd_sub_group_size(32)]] {  // good
        for (int i = item.get_id()[0]; i < n; i+=total_threads)
 #else
-       range<1>(n), [=](item<1> item) {
+       range<1>(n), [=](item<1> item) [[cl::intel_reqd_sub_group_size(32)]] {
        auto i = item.get_id();
 #endif
 
       { 
-      real_type ax_i = particles_acc_x[i];
-      real_type ay_i = particles_acc_y[i];
-      real_type az_i = particles_acc_z[i];
+      real_type ax_i = make_ptr<real_type, access::address_space::global_space>(_particles->acc_x)[i];
+      real_type ay_i = make_ptr<real_type, access::address_space::global_space>(_particles->acc_y)[i];
+      real_type az_i = make_ptr<real_type, access::address_space::global_space>(_particles->acc_z)[i];
       for (int j = 0; j < n; j++) {
         real_type dx, dy, dz;
      	  real_type distanceSqr = 0.0f;
      	  real_type distanceInv = 0.0f;
      	     
-     	  dx = particles_pos_x[j] - particles_pos_x[i];	//1flop
-     	  dy = particles_pos_y[j] - particles_pos_y[i];	//1flop	
-     	  dz = particles_pos_z[j] - particles_pos_z[i];	//1flop
+     	  dx = make_ptr<real_type, access::address_space::global_space>(_particles->pos_x)[j] - make_ptr<real_type, access::address_space::global_space>(_particles->pos_x)[i];	//1flop
+     	  dy = make_ptr<real_type, access::address_space::global_space>(_particles->pos_y)[j] - make_ptr<real_type, access::address_space::global_space>(_particles->pos_y)[i];	//1flop	
+     	  dz = make_ptr<real_type, access::address_space::global_space>(_particles->pos_z)[j] - make_ptr<real_type, access::address_space::global_space>(_particles->pos_z)[i];	//1flop
      	
         distanceSqr = dx*dx + dy*dy + dz*dz + softeningSquared;	//6flops
         distanceInv = 1.0f / sqrt(distanceSqr);			//1div+1sqrt
      
-     	  ax_i += dx * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-     	  ay_i += dy * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
-     	  az_i += dz * G * particles_mass[j] * distanceInv * distanceInv * distanceInv; //6flops
+     	  ax_i += dx * G * make_ptr<real_type, access::address_space::global_space>(_particles->mass)[j] * distanceInv * distanceInv * distanceInv; //6flops
+     	  ay_i += dy * G * make_ptr<real_type, access::address_space::global_space>(_particles->mass)[j] * distanceInv * distanceInv * distanceInv; //6flops
+     	  az_i += dz * G * make_ptr<real_type, access::address_space::global_space>(_particles->mass)[j] * distanceInv * distanceInv * distanceInv; //6flops
       }
-      particles_acc_x[i] = ax_i;
-      particles_acc_y[i] = ay_i;
-      particles_acc_z[i] = az_i;
+      make_ptr<real_type, access::address_space::global_space>(_particles->acc_x)[i] = ax_i;
+      make_ptr<real_type, access::address_space::global_space>(_particles->acc_y)[i] = ay_i;
+      make_ptr<real_type, access::address_space::global_space>(_particles->acc_z)[i] = az_i;
       }
      }); // parallel_for
    }); // queue scope
