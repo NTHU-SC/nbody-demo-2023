@@ -21,7 +21,7 @@
 #ifndef _PARTICLE_HPP
 #define _PARTICLE_HPP
 #include "types.hpp"
-
+using namespace cl::sycl;
 struct Particle
 {
   public:
@@ -45,15 +45,15 @@ struct ParticleSoA
     ParticleSoA() { init();}
     void init() 
     {
-      pos_x = 0; pos_y = 0; pos_z = 0;
-      vel_x = 0; vel_y = 0; vel_z = 0;
-      acc_x = 0; acc_y = 0; acc_z = 0;
-      mass  = 0;
+//      pos_x = 0; pos_y = 0; pos_z = 0;
+//      vel_x = 0; vel_y = 0; vel_z = 0;
+//      acc_x = 0; acc_y = 0; acc_z = 0;
+//      mass  = 0;
     }
-    real_type *pos_x, *pos_y, *pos_z;
-    real_type *vel_x, *vel_y, *vel_z;
-    real_type *acc_x, *acc_y, *acc_z;  
-    real_type *mass;
+    multi_ptr<real_type, access::address_space::global_space> pos_x, pos_y, pos_z;
+    multi_ptr<real_type, access::address_space::global_space> vel_x, vel_y, vel_z;
+    multi_ptr<real_type, access::address_space::global_space> acc_x, acc_y, acc_z;  
+    multi_ptr<real_type, access::address_space::global_space> mass;
 };
 
 #endif
