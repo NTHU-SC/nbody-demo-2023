@@ -98,7 +98,7 @@ void GSimulation :: start()
   auto work_group_size =q.get_device().get_info<info::device::max_work_group_size>();
   auto total_threads = (int)(num_groups * work_group_size);
 
-  auto _particles = particles;
+  auto _particles = make_ptr<ParticleSoA, access::address_space::global_space>(particles);
 
   for (int s=1; s<=get_nsteps(); ++s) {
     ts0 += time.start(); 
