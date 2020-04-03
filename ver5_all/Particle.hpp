@@ -21,6 +21,7 @@
 #ifndef _PARTICLE_HPP
 #define _PARTICLE_HPP
 #include "types.hpp"
+#include "CL/sycl.hpp"
 using namespace cl::sycl;
 struct Particle
 {
