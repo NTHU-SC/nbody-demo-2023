@@ -27,27 +27,9 @@ using namespace cl::sycl;
 
 void GSimulation :: start() 
 {
-#ifdef SYCL4CUDA
-  class CUDASelector : public cl::sycl::device_selector {
-  public:
-    int operator()(const cl::sycl::device &Device) const override {
-
-      const std::string DriverVersion = Device.get_info<info::device::driver_version>();
-
-      if (Device.is_gpu() && (DriverVersion.find("CUDA") != std::string::npos)) {
-        return 1;
-      };
-      return -1;
-    }
-};
-  auto q = queue(CUDASelector{});
-  auto _dev = q.get_device();
-  auto _ctx = q.get_context();
-#else
   auto q = queue(gpu_selector{});
   auto _dev = q.get_device();
   auto _ctx = q.get_context();
-#endif
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();

@@ -50,13 +50,13 @@ else ifeq ($(ARCH),opencl)
 
 else ifeq ($(ARCH),sycl-4cuda)
 	CXX=clang++
-	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA
+	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-4cuda-usm)
 	CXX=clang++
-	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DSYCL4CUDA 
+	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
