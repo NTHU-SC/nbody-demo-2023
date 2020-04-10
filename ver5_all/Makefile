@@ -85,6 +85,12 @@ else ifeq ($(ARCH),sycl-hipsycl)
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
+else ifeq ($(ARCH),hip)
+	CXX=hipcc
+	CXXFLAGS = -ffast-math
+	INCLUDES = -I./programming_models/hip -I./
+	SOURCES = ./programming_models/hip/Compute.cpp  
+
 
 else ifeq ($(ARCH),cpu)
 	CXX=icpc
@@ -134,10 +140,12 @@ else ifeq ($(ARCH), sycl-hipsycl)
 	$(info Building Nbody for $(ARCH) )
 else ifeq ($(ARCH), cuda)
 	$(info Building Nbody for $(ARCH) )
+else ifeq ($(ARCH), hip)
+	$(info Building Nbody for $(ARCH) )
 else
 	$(info ARCH = ${ARCH} ) 
 	$(info please set ARCH env var: )
-	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-intel-usm, sycl-4cuda, sycl-4cuda-usm, sycl-codeplay, cuda)
+	$(info cpu, opencl, kokkos, kokkos_cuda, openmptarget_icx, openmptarget_clang-ykt, sycl-intel, sycl-intel-usm, sycl-4cuda, sycl-4cuda-usm, sycl-codeplay, cuda, hip)
 	$(error copmilation aborted.)
 endif
 
