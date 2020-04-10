@@ -113,7 +113,10 @@ void GSimulation :: init_mpi()
   }
   MPI_Bcast(npp_global, world_size, MPI_INT, 0, MPI_COMM_WORLD);
   //std::cout << "Rank: " << world_rank << " Share: " << npp << std::endl;
+#else
+  world_rank = 0;
 #endif
+
 }
 
 void GSimulation :: print_header()
@@ -174,17 +177,17 @@ void GSimulation :: mpi_bcast_all()
 #ifdef USE_MPI
   int n = get_npart();
   // update all ranks with latest data from master
-  MPI_Bcast(particles->vel_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(particles->vel_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(particles->vel_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->vel_x, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->vel_y, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->vel_z, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
 
-  MPI_Bcast(particles->pos_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(particles->pos_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(particles->pos_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->pos_x, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->pos_y, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->pos_z, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
 
-  MPI_Bcast(particles->acc_x, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(particles->acc_y, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(particles->acc_z, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->acc_x, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->acc_y, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(particles->acc_z, n, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -202,9 +205,9 @@ void GSimulation :: mpi_gather_acc(int start)
   for (int i = 1; i < world_size; i++)
     disp[i] = disp[i-1] + npp_global[i-1];
 
-  MPI_Gatherv(particles->acc_x + disp[world_rank], npp_global[world_rank], MPI_FLOAT, accx, npp_global, disp, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Gatherv(particles->acc_y + disp[world_rank], npp_global[world_rank], MPI_FLOAT, accy, npp_global, disp, MPI_FLOAT, 0, MPI_COMM_WORLD);
-  MPI_Gatherv(particles->acc_z + disp[world_rank], npp_global[world_rank], MPI_FLOAT, accz, npp_global, disp, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gatherv(particles->acc_x + disp[world_rank], npp_global[world_rank], MPI_REAL_TYPE, accx, npp_global, disp, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Gatherv(particles->acc_y + disp[world_rank], npp_global[world_rank], MPI_REAL_TYPE, accy, npp_global, disp, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
+  MPI_Gatherv(particles->acc_z + disp[world_rank], npp_global[world_rank], MPI_REAL_TYPE, accz, npp_global, disp, MPI_REAL_TYPE, 0, MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
   for (int ii = 0; ii < n; ii++) {
@@ -215,9 +218,9 @@ void GSimulation :: mpi_gather_acc(int start)
 #endif
 }
 
-#ifndef USM
 GSimulation :: ~GSimulation()
 {
+#ifndef USM
   free(particles->pos_x);
   free(particles->pos_y);
   free(particles->pos_z);
@@ -229,9 +232,21 @@ GSimulation :: ~GSimulation()
   free(particles->acc_z);
   free(particles->mass);
   free(particles);
+#else 
+  free(particles->pos_x, q);
+  free(particles->pos_y, q);
+  free(particles->pos_z, q);
+  free(particles->vel_x, q);
+  free(particles->vel_y, q);
+  free(particles->vel_z, q);
+  free(particles->acc_x, q);
+  free(particles->acc_y, q);
+  free(particles->acc_z, q);
+  free(particles->mass, q);
+  free(particles);
+#endif
 
 #ifdef USE_MPI
   MPI_Finalize();
 #endif
 }
-#endif

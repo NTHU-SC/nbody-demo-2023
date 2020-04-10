@@ -19,3 +19,6 @@
  */
 
 typedef float real_type;
+#ifdef USE_MPI
+typedef MPI_FLOAT MPI_REAL_TYPE
+#endif

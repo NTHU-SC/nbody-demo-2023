@@ -27,15 +27,6 @@ int main(int argc, char** argv)
   int nstep; 		//number ot integration steps
   
   GSimulation sim;
-  if (sim.world_rank == 0)
-    printf("nbody simulation OpenCL version.\n \
-      ./nbody.x <num_particles> <num_steps> <cpu-to-gpu ratio> <cpu-wgsize> <gpu-wgsize>\n \
-      <cpu-to-gpu-ratio> is optional and will default to 0 which will start a parameter sweep from 0 to 100 percent. \n \
-      <thread_dim0> refers to global workgroup size / CUDA block size and is optional and will default to 0.\n \
-      <thread_dim1> refers to local workgroup size and is optional and will default to 0.\n \
-      to test for correctness: ./nbody.x 2000 500 <cpu/gpu/cpu+gpu> \n \
-      last reported energy  level should be: ~571 \n \
-      ");
   std::string a;
   if(argc>1)
   {
