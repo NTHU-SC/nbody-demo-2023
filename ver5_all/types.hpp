@@ -17,8 +17,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-typedef float real_type;
 #ifdef USE_MPI
-typedef MPI_FLOAT MPI_REAL_TYPE
+#include <mpi.h>
+#define MPI_REAL_TYPE MPI_FLOAT
 #endif
+typedef float real_type;
+

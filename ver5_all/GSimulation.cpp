@@ -218,9 +218,9 @@ void GSimulation :: mpi_gather_acc(int start)
 #endif
 }
 
+#ifndef USM
 GSimulation :: ~GSimulation()
 {
-#ifndef USM
   free(particles->pos_x);
   free(particles->pos_y);
   free(particles->pos_z);
@@ -232,21 +232,9 @@ GSimulation :: ~GSimulation()
   free(particles->acc_z);
   free(particles->mass);
   free(particles);
-#else 
-  free(particles->pos_x, q);
-  free(particles->pos_y, q);
-  free(particles->pos_z, q);
-  free(particles->vel_x, q);
-  free(particles->vel_y, q);
-  free(particles->vel_z, q);
-  free(particles->acc_x, q);
-  free(particles->acc_y, q);
-  free(particles->acc_z, q);
-  free(particles->mass, q);
-  free(particles);
-#endif
 
 #ifdef USE_MPI
   MPI_Finalize();
 #endif
 }
+#endif

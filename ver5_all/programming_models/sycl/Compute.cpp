@@ -28,8 +28,6 @@ using namespace cl::sycl;
 void GSimulation :: start() 
 {
   auto q = queue(gpu_selector{});
-  auto _dev = q.get_device();
-  auto _ctx = q.get_context();
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();

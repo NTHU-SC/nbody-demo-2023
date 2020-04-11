@@ -32,11 +32,16 @@
 #include "mpi.h"
 #endif
 
+#ifdef USE_SYCL
+#include <CL/sycl.hpp>
+using namespace cl::sycl;
+#endif
+
 class GSimulation 
 {
 public:
   GSimulation();
-  ~GSimulation();
+  virtual ~GSimulation();
   
   void init();
   void set_number_of_particles(int N);
@@ -61,6 +66,9 @@ public:
 
   
 private:
+#ifdef USE_SYCL
+queue q;
+#endif
   ParticleSoA *particles;
   
   int       _npart;		//number of particles

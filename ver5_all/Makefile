@@ -23,14 +23,14 @@ else ifeq ($(ARCH),kokkos_cuda)
 
 else ifeq ($(ARCH),openmptarget_icx)
 	CXX = icpx
-	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ -ffast-math
+	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ 
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
-	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -Wdeprecated -ffast-math
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -Wdeprecated 
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
@@ -50,57 +50,57 @@ else ifeq ($(ARCH),opencl)
 
 else ifeq ($(ARCH),sycl-4cuda)
 	CXX=clang++
-	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice
+	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DUSE_SYCL
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-4cuda-usm)
 	CXX=clang++
-	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice
+	CXXFLAGS = -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DUSE_SYCL
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel)
-	CXX=dpcpp
-	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only
+	CXX=mpionecxx
+	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only -DUSE_SYCL 
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel-usm)
-	CXX=dpcpp
-	CXXFLAGS = -fsycl -DUSM -fdebug-info-for-profiling -gline-tables-only  -ffast-math
+	CXX=mpionecxx
+	CXXFLAGS = -fsycl -DUSM -DUSE_SYCL -g -DUSE_MPI
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
 
 else ifeq ($(ARCH),sycl-codeplay)
 	CXX=compute++
-	CXXFLAGS = -lComputeCpp -sycl-driver 
+	CXXFLAGS = -lComputeCpp -sycl-driver  -DUSE_SYCL
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-hipsycl)
-	CXX=syclcc-clang-wrapper #wrapper just sets -gcc-toolchain
-	CXXFLAGS = -ffast-math
+	CXX=syclcc-clang-wrapper -DUSE_SYCL
+	CXXFLAGS = 
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),hip)
 	CXX=hipcc
-	CXXFLAGS = -ffast-math
+	CXXFLAGS = 
 	INCLUDES = -I./programming_models/hip -I./
 	SOURCES = ./programming_models/hip/Compute.cpp  
 
 
 else ifeq ($(ARCH),cpu)
-	CXX=icpc
-	CXXFLAGS = -xhost -qopenmp -DASALIGN
+	CXX=mpionecxx
+	CXXFLAGS = -fiopenmp -DUSE_MPI
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/Compute.cpp  
 endif
 
 
-COMPFLAGS = -std=c++14 -O2 -DMAXTHREADS
+COMPFLAGS = -std=c++14 -O2 
 SOURCES += main.cpp GSimulation.cpp
 
 .SUFFIXES: .o .cpp
