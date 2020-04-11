@@ -92,13 +92,14 @@ void GSimulation :: start()
     start = 0;
     end = n;
 #endif
+    auto r = range<1>(end-start);
     q.submit([&] (handler& cgh) {
 
        cgh.parallel_for<class update_accel>(
 #ifdef MAXTHREADS
        range<1>(total_threads), [=](item<1> item)
 #else
-       range<1>(end), [=](item<1> item)
+       r, [=](item<1> item)
 #endif
 
        { // lambda start

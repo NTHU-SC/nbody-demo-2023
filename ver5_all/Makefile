@@ -62,13 +62,13 @@ else ifeq ($(ARCH),sycl-4cuda-usm)
 
 else ifeq ($(ARCH),sycl-intel)
 	CXX=mpionecxx
-	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only -DUSE_SYCL 
+	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only -DUSE_SYCL  -DUSE_MPI -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel-usm)
 	CXX=mpionecxx
-	CXXFLAGS = -fsycl -DUSM -DUSE_SYCL -g -DUSE_MPI
+	CXXFLAGS = -fsycl -DUSM -DUSE_SYCL -g -DUSE_MPI -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 

@@ -33,10 +33,6 @@ void GSimulation :: start()
   int n = get_npart();
   int i;
 
-  // Set up Max Total Threads
-  auto num_groups = q.get_device().get_info<info::device::max_compute_units>();
-  auto work_group_size =q.get_device().get_info<info::device::max_work_group_size>();
-  auto total_threads = (int)(num_groups * work_group_size);
 
   const int alignment = 32;
   particles = (ParticleSoA*) aligned_alloc(alignment, sizeof(ParticleSoA));
@@ -65,16 +61,31 @@ void GSimulation :: start()
   const float G = 6.67259e-11f;
   
   CPUTime time;
-  double ts0 = 0;
-  double ts1 = 0;
-  double nd = double(n);
-  double gflops = 1e-9 * ( (11. + 18. ) * nd*nd  +  nd * 19. );
-  double av=0.0, dev=0.0;
-  int nf = 0;
-  
+  ts0 = 0;
+  ts1 = 0;
+  nd = double(n);
+  gflops = 1e-9 * ( (11. + 18. ) * nd*nd  +  nd * 19. );
+  av=0.0, dev=0.0;
+  nf = 0;
+
+  // Set up Max Total Threads
+  auto num_groups = q.get_device().get_info<info::device::max_compute_units>();
+  auto work_group_size =q.get_device().get_info<info::device::max_work_group_size>();
+  auto total_threads = (int)(num_groups * work_group_size);
+ 
   const double t0 = time.start();
-  for (int s=1; s<=get_nsteps(); ++s)
+  for (s=1; s<=get_nsteps(); ++s)
   {   
+    int start, end;
+#ifdef USE_MPI
+    mpi_bcast_all();
+    start = world_rank * npp;
+    end = start + npp_global[0];
+#else
+    start = 0;
+    end = n;
+#endif 
+    auto r = range<1>(end-start);
 
    ts0 += time.start(); 
    {
@@ -103,13 +114,18 @@ void GSimulation :: start()
 
        cgh.parallel_for<class update_accel>(
 #ifdef MAXTHREADS
-       range<1>(total_threads), [=](item<1> item) {  // good
-       for (int i = item.get_id()[0]; i < n; i+=total_threads)
+       range<1>(total_threads), [=](item<1> item)
 #else
-       range<1>(n), [=](item<1> item) {
-       auto i = item.get_id();
+       r, [=](item<1> item)
 #endif
-       {
+
+       { // lambda start
+#ifdef MAXTHREADS
+      for (int i = item.get_id()[0] + start; i < end; i+=total_threads)
+#else
+      auto i = item.get_id() + start;
+#endif
+      { 
          real_type ax_i = particles_acc_x[i];
          real_type ay_i = particles_acc_y[i];
          real_type az_i = particles_acc_z[i];
@@ -138,10 +154,13 @@ void GSimulation :: start()
          }); // end of parallel for scope
        }); // end of command group scope
    } // end of buffer scope
+   q.wait();
+#ifdef USE_MPI
+    mpi_gather_acc(start);
+#endif
 
    energy = 0;
-
-   for (int i = 0; i < n; ++i)// update position
+   for (i = 0; i < n; ++i)// update position
    {
      particles->vel_x[i] += particles->acc_x[i] * dt; //2flops
      particles->vel_y[i] += particles->acc_y[i] * dt; //2flops
@@ -151,7 +170,6 @@ void GSimulation :: start()
      particles->pos_y[i] += particles->vel_y[i] * dt; //2flops
      particles->pos_z[i] += particles->vel_z[i] * dt; //2flops
 
-//     no need since OCL overwrites
      particles->acc_x[i] = 0.;
      particles->acc_y[i] = 0.;
      particles->acc_z[i] = 0.;
@@ -161,31 +179,10 @@ void GSimulation :: start()
                particles->vel_y[i]*particles->vel_y[i] +
                particles->vel_z[i]*particles->vel_z[i]); //7flops
    }
-  
     _kenergy = 0.5 * energy; 
-
     
     ts1 += time.stop();
-    if(!(s%get_sfreq()) ) 
-    {
-      nf += 1;      
-      std::cout << " " 
-		<<  std::left << std::setw(8)  << s
-		<<  std::left << std::setprecision(5) << std::setw(8)  << s*get_tstep()
-		<<  std::left << std::setprecision(5) << std::setw(12) << _kenergy
-		<<  std::left << std::setprecision(5) << std::setw(12) << (ts1 - ts0)
-		<<  std::left << std::setprecision(5) << std::setw(12) << gflops*get_sfreq()/(ts1 - ts0)
-		<<  std::endl;
-      if(nf > 2) 
-      {
-	av  += gflops*get_sfreq()/(ts1 - ts0);
-	dev += gflops*get_sfreq()*gflops*get_sfreq()/((ts1-ts0)*(ts1-ts0));
-      }
-      
-      ts0 = 0;
-      ts1 = 0;
-    }
-  
+    print_stats();
   } //end of the time step loop
   
   const double t1 = time.stop();
@@ -195,12 +192,6 @@ void GSimulation :: start()
   av/=(double)(nf-2);
   dev=sqrt(dev/(double)(nf-2)-av*av);
   
-  int nthreads=1;
-
-  std::cout << std::endl;
-  std::cout << "# Number Threads     : " << nthreads << std::endl;	   
-  std::cout << "# Total Time (s)     : " << _totTime << std::endl;
-  std::cout << "# Average Perfomance : " << av << " +- " <<  dev << std::endl;
-  std::cout << "===============================" << std::endl;
-
+  print_flops();
 }
+
