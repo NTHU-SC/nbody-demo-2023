@@ -22,8 +22,8 @@ else ifeq ($(ARCH),kokkos_cuda)
 	SOURCES = ./programming_models/kokkos/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_icx)
-	CXX = icpx
-	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ 
+	CXX = icpc
+	CXXFLAGS = -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ 
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
@@ -61,14 +61,14 @@ else ifeq ($(ARCH),sycl-4cuda-usm)
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel)
-	CXX=mpionecxx
-	CXXFLAGS = -fsycl -fdebug-info-for-profiling -gline-tables-only -DUSE_SYCL  -DUSE_MPI -DMAXTHREADS
+	CXX=mpiicpc
+	CXXFLAGS = -qnextgen -fsycl -fdebug-info-for-profiling -gline-tables-only -DUSE_SYCL  -DUSE_MPI -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl -I./
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel-usm)
-	CXX=mpionecxx
-	CXXFLAGS = -fsycl -DUSM -DUSE_SYCL -g -DUSE_MPI -DMAXTHREADS
+	CXX=mpiicpc
+	CXXFLAGS = -qnextgen -fsycl -DUSM -DUSE_SYCL -g -DUSE_MPI -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
@@ -93,8 +93,8 @@ else ifeq ($(ARCH),hip)
 
 
 else ifeq ($(ARCH),cpu)
-	CXX=mpionecxx
-	CXXFLAGS = -fiopenmp -DUSE_MPI
+	CXX=mpiicpc
+	CXXFLAGS = -qnextgen -fiopenmp -DUSE_MPI
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/Compute.cpp  
 endif
