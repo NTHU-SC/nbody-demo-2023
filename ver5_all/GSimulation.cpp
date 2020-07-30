@@ -27,11 +27,6 @@ GSimulation :: GSimulation()
   set_nsteps(500);
   set_tstep(0.1); 
   set_sfreq(50);
-  init_mpi();
-  if (world_rank == 0) {
-    std::cout << "===============================" << std::endl;
-    std::cout << " Initialize Gravity Simulation" << std::endl;
-  }
 }
 
 void GSimulation :: set_number_of_particles(int N)  

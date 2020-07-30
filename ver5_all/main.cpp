@@ -37,12 +37,13 @@ int main(int argc, char** argv)
       nstep=atoi(argv[2]);
       sim.set_number_of_steps(nstep);  
     }
-    if(argc > 3) 
+    if(argc > 3) {
       a = argv[3];
       std::cout << a << std::endl;
       if (!a.compare("cpu")) sim.set_devices(1);
       if (!a.compare(std::string("gpu"))) sim.set_devices(2);
       if (!a.compare(std::string("cpu+gpu"))) sim.set_devices(3);
+    }
 
     if(argc > 4) 
       sim.set_cpu_ratio(atof(argv[4]));
@@ -51,6 +52,12 @@ int main(int argc, char** argv)
       sim.set_thread_dim0(atoi(argv[5]));
       sim.set_thread_dim1(atoi(argv[6]));
     }
+  }
+
+  sim.init_mpi();
+  if (sim.world_rank == 0) {
+    std::cout << "===============================" << std::endl;
+    std::cout << " Initialize Gravity Simulation" << std::endl;
   }
   
   sim.start();
