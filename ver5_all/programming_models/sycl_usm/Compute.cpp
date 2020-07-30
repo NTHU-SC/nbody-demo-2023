@@ -27,6 +27,8 @@ using namespace cl::sycl;
 void GSimulation :: start() 
 {
   q = queue(gpu_selector{});
+  std::cout << "Using SYCL Device: ";
+  std::cout << q.get_device().get_info<info::device::name>() << std::endl;
   real_type energy;
   real_type dt = get_tstep();
   int n = get_npart();
