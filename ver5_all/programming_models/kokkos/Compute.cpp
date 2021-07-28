@@ -27,7 +27,13 @@ void GSimulation :: start()
 {
 
   /*--------------------------- KOKKOS ---------------------*/
-#ifdef KOKKOS_SYCL
+#ifdef KOKKOS_OPENMPTARGET
+  typedef Kokkos::Experimental::OpenMPTarget::execution_space espace;
+  typedef Kokkos::Experimental::OpenMPTarget::memory_space mspace;
+  typedef Kokkos::LayoutLeft layout;
+
+  typedef Kokkos::View<real_type*, layout, mspace> VecView;
+#elif KOKKOS_SYCL
   typedef Kokkos::Experimental::SYCL espace;
   typedef Kokkos::Experimental::SYCLSharedUSMSpace mspace;
   typedef Kokkos::LayoutLeft layout;
