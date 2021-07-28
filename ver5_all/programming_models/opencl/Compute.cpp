@@ -72,7 +72,7 @@ void GSimulation :: start()
   int nf = 0;
 
   std::cout << "device option: " << get_devices() << std::endl;
-  OCL::OCL OpenCL = OCL::OCL(get_devices());  // initialize OpenCL environment w/default settings
+  OCL OpenCL = OCL(get_devices());  // initialize OpenCL environment w/default settings
 
   // Kernel Source
   std::string src_str = R"CLC(

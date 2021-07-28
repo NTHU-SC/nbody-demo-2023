@@ -5,32 +5,31 @@ ifeq ($(ARCH),cuda)
 	SOURCES = ./programming_models/cuda/Compute.cu
 
 else ifeq ($(ARCH),kokkos)
-	CXX = icpc
-	CXXFLAGS = -qopenmp -DKOKKOS -DASALIGN
-	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_latest/install
+	CXX = icpx
+CXXFLAGS = -fsycl -fsycl-unnamed-lambda -fiopenmp -DKOKKOS -std=c++17 -DKOKKOS_SYCL
+	KOKKOS_DIR=${Kokkos_ROOT}
 	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
-	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
+	LIBS = -L$(KOKKOS_DIR)/lib -lkokkoscore
 	SOURCES = ./programming_models/kokkos/Compute.cpp 
 
 else ifeq ($(ARCH),kokkos_cuda)
 	CXX = nvcc_wrapper
-	export NVCC_WRAPPER_DEFAULT_COMPILER=icpc
-	CXXFLAGS = -qopenmp --expt-extended-lambda -DKOKKOS -DKOKKOS_CUDA
-	KOKKOS_DIR=/home/pvelesko/local/tarballs/kokkos/build_cuda_sm70/install
-	INCLUDES = -I$(KOKKOS_DIR)/include -I./programming_models/kokkos -I./
-	LIBS = -L$(KOKKOS_DIR)/lib -lkokkos 
+	CXXFLAGS = -fopenmp -DKOKKOS -DKOKKOS_CUDA --expt-extended-lambda -arch=sm_75
+	KOKKOS_DIR=${KOKKOS_ROOT}
+	INCLUDES = -I$(KOKKOS_ROOT)/include -I./programming_models/kokkos -I./
+	LIBS = -L$(KOKKOS_ROOT)/lib -lkokkoscore
 	SOURCES = ./programming_models/kokkos/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_icx)
-	CXX = icpc
-	CXXFLAGS = -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ 
+	CXX = icpx
+	CXXFLAGS = -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ 
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
 
 else ifeq ($(ARCH),openmptarget_clang-ykt)
 	CXX = clang++
-	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 -Wdeprecated 
+	CXXFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda
 	INCLUDES = -I./programming_models/openmp -I./
 	LIBS = 
 	SOURCES = ./programming_models/openmp/Compute.cpp 
@@ -43,8 +42,8 @@ else ifeq ($(ARCH),openmptarget_xl)
 	SOURCES = ./programming_models/openmp/Compute.cpp 
 
 else ifeq ($(ARCH),opencl)
-	CXX=icpc
-	CXXFLAGS = -lOpenCL
+	CXX=icpx
+	CXXFLAGS = -L/opt/intel/oneapi/compiler/2021.2.0/linux/lib/ -I/opt/intel/oneapi/compiler/2021.2.0/linux/include  -lOpenCL
 	INCLUDES = -I./programming_models/opencl -I./
 	SOURCES = ./programming_models/opencl/Compute.cpp  
 
@@ -67,8 +66,8 @@ else ifeq ($(ARCH),sycl-intel)
 	SOURCES = ./programming_models/sycl/Compute.cpp  
 
 else ifeq ($(ARCH),sycl-intel-usm)
-	CXX=mpiicpc
-	CXXFLAGS = -qnextgen -fsycl -DUSM -DUSE_SYCL -g -DUSE_MPI -DMAXTHREADS
+	CXX=icpx
+	CXXFLAGS = -fsycl -DUSM -DUSE_SYCL -g -DMAXTHREADS
 	INCLUDES = -I./programming_models/sycl_usm -I./
 	SOURCES = ./programming_models/sycl_usm/Compute.cpp  
 
@@ -93,14 +92,14 @@ else ifeq ($(ARCH),hip)
 
 
 else ifeq ($(ARCH),cpu)
-	CXX=mpiicpc
-	CXXFLAGS = -qnextgen -fiopenmp -DUSE_MPI
+	CXX=/usr/bin/clang++
+	CXXFLAGS = -fopenmp
 	INCLUDES = -I./programming_models/cpu -I./
 	SOURCES = ./programming_models/cpu/Compute.cpp  
 endif
 
 
-COMPFLAGS = -std=c++14 -O2 
+COMPFLAGS = -std=c++17 -O2 
 SOURCES += main.cpp GSimulation.cpp
 
 .SUFFIXES: .o .cpp

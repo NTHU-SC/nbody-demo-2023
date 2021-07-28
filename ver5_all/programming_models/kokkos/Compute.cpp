@@ -27,7 +27,13 @@ void GSimulation :: start()
 {
 
   /*--------------------------- KOKKOS ---------------------*/
-#ifdef KOKKOS_CUDA
+#ifdef KOKKOS_SYCL
+  typedef Kokkos::Experimental::SYCL espace;
+  typedef Kokkos::Experimental::SYCLSharedUSMSpace mspace;
+  typedef Kokkos::LayoutLeft layout;
+
+  typedef Kokkos::View<real_type*, layout, mspace> VecView;
+#elif KOKKOS_CUDA
   typedef Kokkos::Cuda espace;
   typedef Kokkos::CudaSpace mspace;
   typedef Kokkos::LayoutLeft layout;

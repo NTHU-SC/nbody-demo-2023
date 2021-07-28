@@ -86,7 +86,6 @@ map(from: particles_acc_y[:n]) \
 map(from: particles_acc_z[:n]) \
 map(to: particles_mass [:n]) \
    
-{
    for (i = 0; i < n; i++)// update acceleration
    {
      real_type ax_i = 0;
@@ -114,7 +113,6 @@ map(to: particles_mass [:n]) \
      particles_acc_y[i] = ay_i;
      particles_acc_z[i] = az_i;
    }
-} //end target
    energy = 0;
 
    for (i = 0; i < n; ++i)// update position
