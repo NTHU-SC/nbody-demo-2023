@@ -27,19 +27,11 @@ void GSimulation :: start()
 {
 
   /*--------------------------- KOKKOS ---------------------*/
-#ifdef KOKKOS_CUDA
-  typedef Kokkos::Cuda espace;
-  typedef Kokkos::CudaSpace mspace;
+  typedef Kokkos::DefaultExecutionSpace espace;
+  typedef Kokkos::DefaultExecutionSpace::memory_space mspace;
   typedef Kokkos::LayoutLeft layout;
 
   typedef Kokkos::View<real_type*, layout, mspace> VecView;
-#else
-  typedef Kokkos::OpenMP espace;
-  typedef Kokkos::HostSpace mspace;
-  typedef Kokkos::LayoutLeft layout;
-
-  typedef Kokkos::View<real_type*, layout, mspace> VecView;
-#endif
   /*--------------------------- KOKKOS ---------------------*/
 
   real_type energy;
