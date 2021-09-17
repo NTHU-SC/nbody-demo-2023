@@ -7,3 +7,4 @@ ver5_omp/profiles
 *.o
 *.x
 *.optrpt
+ver5_all/build/*
