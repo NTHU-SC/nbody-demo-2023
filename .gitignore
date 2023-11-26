@@ -8,3 +8,5 @@ ver5_omp/profiles
 *.x
 *.optrpt
 ver5_all/build/*
+
+vtune_*/
