@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH -J nbody_vtune
-#SBATCH -A ACD114003
-#SBATCH -p hpcxai1
-#SBATCH -o nbody_vtube_out_%j.log
-#SBATCH -e nbody_vtube_err_%j.log
-#SBATCH -n 1
+#SBATCH -A GOV115003
+#SBATCH -p ct112
+#SBATCH -o nbody_vtune_out_%j.log
+#SBATCH -e nbody_vtune_err_%j.log
+#SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -c 112
 
